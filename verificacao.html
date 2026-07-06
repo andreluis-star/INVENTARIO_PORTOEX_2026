@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>PORTOEX · Verificação de Pátio</title>
+<style>
+  :root{
+    --navy:#1A3A6E; --navy-d:#122a52; --orange:#E8611A;
+    --green:#1a7a3e; --amber:#b45309; --red:#c0392b; --blue:#0b6bc2;
+    --bg:#f2f4f8; --card:#ffffff; --border:#e1e6ee; --ink:#1f2937; --ink-soft:#64748b;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);}
+  header.topbar{background:linear-gradient(135deg,var(--navy),var(--navy-d));color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20;box-shadow:0 2px 10px rgba(0,0,0,.15);}
+  .brand{font-weight:800;font-size:18px;letter-spacing:.5px;}
+  .brand span{display:block;font-weight:500;font-size:12px;opacity:.8;letter-spacing:.3px;}
+  .sync{display:flex;align-items:center;gap:6px;font-size:12px;opacity:.9;}
+  .dot{width:8px;height:8px;border-radius:50%;background:#2ecc71;box-shadow:0 0 0 3px rgba(46,204,113,.25);}
+  .dot.offline{background:#e74c3c;box-shadow:0 0 0 3px rgba(231,76,60,.25);}
+  .dot.syncing{background:#f1c40f;box-shadow:0 0 0 3px rgba(241,196,15,.25);}
+
+  nav.tabs{display:flex;gap:4px;background:#fff;padding:0 16px;border-bottom:1px solid var(--border);position:sticky;top:60px;z-index:19;}
+  .tab-btn{border:none;background:none;padding:14px 16px;font-size:14px;font-weight:700;color:var(--ink-soft);cursor:pointer;border-bottom:3px solid transparent;}
+  .tab-btn.active{color:var(--navy);border-bottom-color:var(--orange);}
+
+  main{padding:16px;max-width:1500px;margin:0 auto;}
+  .tab-pane{display:none;}
+  .tab-pane.active{display:block;}
+
+  .daybar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .daybar button{background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:16px;font-weight:700;color:var(--navy);cursor:pointer;}
+  .daybar button:hover{background:#eef1f7;}
+  .daybar select#day-select{border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:14px;font-weight:700;color:var(--ink);background:#fff;min-width:170px;}
+  .btn-hoje{background:var(--navy)!important;color:#fff!important;border-color:var(--navy)!important;}
+  #day-label{font-size:13px;color:var(--ink-soft);margin-left:4px;}
+
+  .summary-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;text-align:center;}
+  .card span{display:block;font-size:24px;font-weight:800;color:var(--navy);}
+  .card label{font-size:11px;color:var(--ink-soft);font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
+  .card.pend span{color:var(--amber);} .card.and span{color:var(--blue);} .card.res span{color:var(--green);}
+
+  .searchbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+  .searchbar input[type=text]{flex:1;min-width:220px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;}
+  .searchbar select{border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;background:#fff;}
+
+  .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:auto;}
+  table{border-collapse:collapse;width:100%;font-size:13px;min-width:1200px;}
+  thead th{background:#f8f9fc;color:var(--navy);font-weight:800;text-align:left;padding:10px 8px;border-bottom:2px solid var(--border);position:sticky;top:0;white-space:nowrap;font-size:11.5px;letter-spacing:.2px;}
+  tbody td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tbody tr:hover{background:#fafbfe;}
+  td.nf{font-weight:800;color:var(--navy);white-space:nowrap;}
+  td.dono{font-weight:600;color:var(--ink);white-space:nowrap;}
+  .badge-dono-vazio{color:#b3b9c4;font-style:italic;font-weight:500;}
+  .cell-input{width:100%;min-width:110px;border:1px solid transparent;border-radius:6px;padding:6px 7px;font-size:12.5px;background:transparent;font-family:inherit;}
+  .cell-input:hover{border-color:var(--border);}
+  .cell-input:focus{outline:none;border-color:var(--orange);background:#fff;box-shadow:0 0 0 2px rgba(232,97,26,.15);}
+  select.status-sel{border:none;border-radius:20px;padding:6px 10px;font-size:12px;font-weight:800;color:#fff;cursor:pointer;min-width:130px;}
+  .st-PENDENTE{background:var(--amber);}
+  .st-EM_ANDAMENTO{background:var(--blue);}
+  .st-RESOLVIDO{background:var(--green);}
+  .empty-state{padding:40px 20px;text-align:center;color:var(--ink-soft);font-size:14px;}
+  textarea.obs-input{width:100%;min-width:170px;min-height:38px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:6px 7px;font-size:12.5px;font-family:inherit;background:#fffdf7;}
+  textarea.obs-input:focus{outline:none;border-color:var(--orange);background:#fff;box-shadow:0 0 0 2px rgba(232,97,26,.15);}
+  td.conferente{white-space:nowrap;font-size:12px;}
+  .conf-badge{display:inline-flex;align-items:center;gap:5px;font-weight:700;color:var(--ink);}
+  .conf-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .btn-hist{background:#fff;border:1px solid var(--border);border-radius:20px;padding:5px 10px;font-size:11.5px;font-weight:700;color:var(--amber);cursor:pointer;white-space:nowrap;}
+  .btn-hist:hover{background:#fff7ef;}
+  .btn-hist[disabled]{color:#c3c9d4;cursor:default;background:#fff;}
+  .btn-hist.open{background:var(--amber);color:#fff;border-color:var(--amber);}
+  tr.hist-row td{background:#fbf8f2;padding:0;border-bottom:1px solid var(--border);}
+  .hist-panel{padding:10px 14px;}
+  .hist-panel table{min-width:0;width:100%;font-size:12px;}
+  .hist-panel thead th{position:static;background:transparent;padding:4px 8px;font-size:10.5px;color:var(--ink-soft);border-bottom:1px solid var(--border);}
+  .hist-panel tbody td{padding:5px 8px;border-bottom:1px solid #eee;color:#374151;}
+  .hist-panel .hp-title{font-size:11.5px;font-weight:800;color:var(--amber);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px;}
+
+  .donos-toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;}
+  .donos-toolbar input{flex:1;min-width:220px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;}
+  .btn-add{background:var(--orange);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;}
+  .btn-add:hover{background:#cf5414;}
+  .btn-import{background:var(--navy);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;}
+  .btn-import:hover{background:var(--navy-d);}
+  .import-hint{font-size:11.5px;color:var(--ink-soft);width:100%;margin-top:-4px;}
+  .novo-dono{display:flex;gap:8px;background:#fff7ef;border:1px solid #f3d2b3;border-radius:10px;padding:10px;margin-bottom:12px;flex-wrap:wrap;}
+  .novo-dono input{flex:1;min-width:180px;border:1px solid var(--border);border-radius:8px;padding:9px 10px;font-size:13px;}
+  .novo-dono button{border:none;border-radius:8px;padding:9px 14px;font-weight:700;font-size:13px;cursor:pointer;}
+  .novo-dono button:first-of-type + button.btn-cancel{background:#e5e7eb;color:#374151;}
+  .novo-dono button:not(.btn-cancel){background:var(--green);color:#fff;}
+  .btn-del{background:none;border:none;color:var(--red);font-weight:800;cursor:pointer;font-size:16px;padding:2px 8px;}
+  .btn-del:hover{background:#fdecea;border-radius:6px;}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:#1f2937;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:100;transition:transform .25s ease;box-shadow:0 6px 20px rgba(0,0,0,.25);}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+  .toast.ok{background:var(--green);} .toast.warn{background:var(--amber);} .toast.err{background:var(--red);}
+
+  @media (max-width:700px){
+    .summary-cards{grid-template-columns:repeat(2,1fr);}
+    main{padding:10px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">PORTOEX <span>Verificação de Pátio · pós-contagem</span></div>
+  <div class="sync"><span id="sync-dot" class="dot"></span><span id="sync-label">conectando...</span></div>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="verif" onclick="App.switchTab('verif')">Verificação</button>
+  <button class="tab-btn" data-tab="donos" onclick="App.switchTab('donos')">Dono da Conta</button>
+</nav>
+
+<main>
+
+  <section id="tab-verif" class="tab-pane active">
+    <div class="daybar">
+      <button onclick="App.changeDay(-1)" title="Dia anterior (com dados)">‹</button>
+      <select id="day-select" onchange="App.onDaySelect(this.value)"></select>
+      <button onclick="App.changeDay(1)" title="Próximo dia (com dados)">›</button>
+      <button class="btn-hoje" onclick="App.goToday()">Hoje</button>
+      <span id="day-label"></span>
+    </div>
+
+    <div class="summary-cards">
+      <div class="card total"><span id="cnt-total">0</span><label>Total do dia</label></div>
+      <div class="card pend"><span id="cnt-pend">0</span><label>Pendente</label></div>
+      <div class="card and"><span id="cnt-and">0</span><label>Em andamento</label></div>
+      <div class="card res"><span id="cnt-res">0</span><label>Resolvido</label></div>
+    </div>
+
+    <div class="searchbar">
+      <input type="text" id="search-verif" placeholder="Buscar por NF, cliente, endereço, observação ou conferente..." oninput="App.renderVerif()">
+      <select id="filter-status" onchange="App.renderVerif()">
+        <option value="">Todos os status</option>
+        <option value="PENDENTE">Pendente</option>
+        <option value="EM_ANDAMENTO">Em andamento</option>
+        <option value="RESOLVIDO">Resolvido</option>
+      </select>
+    </div>
+
+    <div class="table-wrap">
+      <table id="tbl-verif">
+        <thead>
+          <tr>
+            <th>HISTÓRICO</th>
+            <th>DONO DA CONTA</th>
+            <th>CLIENTE</th>
+            <th>NF/DI</th>
+            <th>CONFERENTE</th>
+            <th>VOL</th>
+            <th>END</th>
+            <th>OBSERVAÇÃO / LEITURA</th>
+            <th>1º ATEND. RETORNO</th>
+            <th>1º OPER. RETORNO</th>
+            <th>2º ATEND. RETORNO</th>
+            <th>2º OPER. RETORNO</th>
+            <th>STATUS</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-verif"></tbody>
+      </table>
+      <div id="empty-verif" class="empty-state" style="display:none">Nenhum item do INVENTÁRIO registrado neste dia.</div>
+    </div>
+  </section>
+
+  <section id="tab-donos" class="tab-pane">
+    <div class="donos-toolbar">
+      <input type="text" id="search-donos" placeholder="Buscar cliente ou responsável..." oninput="App.renderDonos()">
+      <button class="btn-import" onclick="document.getElementById('import-file').click()">⭱ Importar planilha</button>
+      <input type="file" id="import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="App.onImportFile(this)">
+      <button class="btn-add" onclick="App.abrirNovoDono()">+ Novo cliente</button>
+      <span class="import-hint">A importação lê a planilha "QUEM É QUEM" (colunas CLIENTE e RESPONSÁVEL 01) e atualiza/adiciona os clientes — não apaga cadastros existentes que não estiverem no arquivo.</span>
+    </div>
+    <div id="novo-dono-row" class="novo-dono" style="display:none">
+      <input type="text" id="nd-cliente" placeholder="Nome do cliente (igual ao usado no INVENTÁRIO)">
+      <input type="text" id="nd-resp" placeholder="Responsável interno">
+      <button onclick="App.salvarNovoDono()">Salvar</button>
+      <button class="btn-cancel" onclick="App.fecharNovoDono()">Cancelar</button>
+    </div>
+    <div class="table-wrap">
+      <table id="tbl-donos">
+        <thead><tr><th style="width:45%">CLIENTE</th><th style="width:45%">RESPONSÁVEL</th><th></th></tr></thead>
+        <tbody id="tbody-donos"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// Mesmo projeto Firebase do sistema PORTOEX Inventário — nós novos e isolados,
+// não interferem nos dados de contagem (só leitura em "inventario").
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyCqc7fvri9fm3a2XJ-5M60GIFEYsUdbGoM",
+  authDomain:        "portoex-inventario.firebaseapp.com",
+  databaseURL:       "https://portoex-inventario-default-rtdb.firebaseio.com",
+  projectId:         "portoex-inventario",
+  storageBucket:     "portoex-inventario.firebasestorage.app",
+  messagingSenderId: "863156663581",
+  appId:             "1:863156663581:web:fc1196b4934bc4c0689df4",
+  measurementId:     "G-R32BL40Q6P"
+};
+
+// Base inicial de "Dono da Conta" (Cliente x Responsável 01), importada da planilha
+// "QUEM É QUEM 2026" (colunas CLIENTE e RESPONSÁVEL 01). Usada só para popular o
+// Firebase na primeira vez que alguém abre este sistema — depois disso, a aba
+// "Dono da Conta" edita direto no banco (ou usa o botão Importar planilha) e esta
+// lista deixa de ser usada.
+const SEED_DONOS = [
+  {"cliente":"Clientes Novos Finais - SP","responsavel":"Adriana"},
+  {"cliente":"Corax","responsavel":"Adriana"},
+  {"cliente":"Cotar Bem","responsavel":"Adriana"},
+  {"cliente":"Iturri","responsavel":"Adriana"},
+  {"cliente":"Leal","responsavel":"Adriana"},
+  {"cliente":"Mais Mu","responsavel":"Adriana"},
+  {"cliente":"Multi","responsavel":"Adriana"},
+  {"cliente":"Multivisão","responsavel":"Adriana"},
+  {"cliente":"Open Portas","responsavel":"Adriana"},
+  {"cliente":"Prime","responsavel":"Adriana"},
+  {"cliente":"Kuka baby","responsavel":"Adriana"},
+  {"cliente":"Esab","responsavel":"Brenda"},
+  {"cliente":"CNTR","responsavel":"Douglas"},
+  {"cliente":"Fita Up","responsavel":"Douglas"},
+  {"cliente":"Impo COMEXPORT","responsavel":"Douglas"},
+  {"cliente":"Impo e Expo Fora do Sul","responsavel":"Douglas"},
+  {"cliente":"Impo SP e MG","responsavel":"Douglas"},
+  {"cliente":"Santa Lolla / SKO","responsavel":"Douglas"},
+  {"cliente":"AHT","responsavel":"Eduarda Dias"},
+  {"cliente":"ALTOMAR","responsavel":"Eduarda Dias"},
+  {"cliente":"Batiki","responsavel":"Eduarda Dias"},
+  {"cliente":"BFT (Abbo Importadora)","responsavel":"Eduarda Dias"},
+  {"cliente":"Canon","responsavel":"Eduarda Dias"},
+  {"cliente":"CKS","responsavel":"Eduarda Dias"},
+  {"cliente":"Factory","responsavel":"Eduarda Dias"},
+  {"cliente":"Grupo Stra","responsavel":"Eduarda Dias"},
+  {"cliente":"lee trading","responsavel":"Eduarda Dias"},
+  {"cliente":"Lehavi","responsavel":"Eduarda Dias"},
+  {"cliente":"Meu rodape","responsavel":"Eduarda Dias"},
+  {"cliente":"Save Energy/Light/SHPY","responsavel":"Eduarda Dias"},
+  {"cliente":"Schottel","responsavel":"Eduarda Dias"},
+  {"cliente":"Setbras","responsavel":"Eduarda Dias"},
+  {"cliente":"Swell Brilia","responsavel":"Eduarda Dias"},
+  {"cliente":"TBM","responsavel":"Eduarda Dias"},
+  {"cliente":"Thompson","responsavel":"Eduarda Dias"},
+  {"cliente":"Value Trading","responsavel":"Eduarda Dias"},
+  {"cliente":"W. Campos","responsavel":"Eduarda Dias"},
+  {"cliente":"Winwin","responsavel":"Eduarda Dias"},
+  {"cliente":"Bsg","responsavel":"Eduarda Dias"},
+  {"cliente":"Itacorda","responsavel":"Eduarda Dias"},
+  {"cliente":"Bktex","responsavel":"Eduarda Dias"},
+  {"cliente":"HND","responsavel":"Eduarda Dias"},
+  {"cliente":"Andritz","responsavel":"Eduarda Dias"},
+  {"cliente":"Bertolucci","responsavel":"Eduarda Dias"},
+  {"cliente":"Foton","responsavel":"Eduarda Dias"},
+  {"cliente":"Fastlink","responsavel":"Eduarda Dias"},
+  {"cliente":"Fenchen","responsavel":"Eduarda Dias"},
+  {"cliente":"Forte (Porche)","responsavel":"Eduarda Dias"},
+  {"cliente":"H&R comercio","responsavel":"Eduarda Dias"},
+  {"cliente":"Kapoc","responsavel":"Eduarda Dias"},
+  {"cliente":"Pharma Nutrition","responsavel":"Eduarda Dias"},
+  {"cliente":"Relaxmedic","responsavel":"Eduarda Dias"},
+  {"cliente":"Winwim","responsavel":"Eduarda Dias"},
+  {"cliente":"Vertex","responsavel":"Eduarda Dias"},
+  {"cliente":"HGS","responsavel":"Gustavo"},
+  {"cliente":"Impo x Expo na região sul","responsavel":"Gustavo"},
+  {"cliente":"Intelbras","responsavel":"Gustavo"},
+  {"cliente":"Lojas Avenida","responsavel":"Gustavo"},
+  {"cliente":"Operação Asia - LCL","responsavel":"Gustavo"},
+  {"cliente":"Operações Forte LTL","responsavel":"Gustavo"},
+  {"cliente":"Plotado do Porto de itapoa","responsavel":"Gustavo"},
+  {"cliente":"Braft","responsavel":"Júlia"},
+  {"cliente":"Ansell / Hercules","responsavel":"Júlia"},
+  {"cliente":"DTA - SC","responsavel":"Júlia"},
+  {"cliente":"DTA - SP","responsavel":"Júlia"},
+  {"cliente":"Operações Timbro","responsavel":"Júlia"},
+  {"cliente":"Clientes Novos Finais","responsavel":"Letícia"},
+  {"cliente":"Mattel","responsavel":"Letícia"},
+  {"cliente":"Ventapel","responsavel":"Letícia"},
+  {"cliente":"Samsonite","responsavel":"Letícia"},
+  {"cliente":"Seger","responsavel":"Letícia"},
+  {"cliente":"VPX","responsavel":"Letícia"},
+  {"cliente":"Konica","responsavel":"Letícia"},
+  {"cliente":"Mrceglia entregas finais + Constante","responsavel":"Letícia"},
+  {"cliente":"Versa","responsavel":"Letícia"},
+  {"cliente":"Yanke/kavika","responsavel":"Letícia"},
+  {"cliente":"Wiks personalizados","responsavel":"Letícia"},
+  {"cliente":"Bike Center","responsavel":"Letícia"},
+  {"cliente":"Cicloevo","responsavel":"Letícia"},
+  {"cliente":"IGP","responsavel":"Letícia"},
+  {"cliente":"Agentes(scalt, jem, dfl, mundial, etc)","responsavel":"Letícia"},
+  {"cliente":"Maxitrade","responsavel":"Letícia"},
+  {"cliente":"Ricoh | RFM log","responsavel":"Letícia"},
+  {"cliente":"Samsung","responsavel":"Letícia"},
+  {"cliente":"Stratus","responsavel":"Letícia"},
+  {"cliente":"Ventuno","responsavel":"Letícia"},
+  {"cliente":"Xerife Lobos","responsavel":"Letícia"},
+  {"cliente":"WineoClock","responsavel":"Letícia"},
+  {"cliente":"Asteri","responsavel":"Letícia"},
+  {"cliente":"Forno Jung","responsavel":"Letícia"},
+  {"cliente":"Ammer","responsavel":"Letícia"},
+  {"cliente":"Strobel","responsavel":"Letícia"},
+  {"cliente":"SMC","responsavel":"Letícia"},
+  {"cliente":"Plot","responsavel":"Letícia"},
+  {"cliente":"Home Collection","responsavel":"Letícia"},
+  {"cliente":"Autel","responsavel":"Letícia"},
+  {"cliente":"Saint","responsavel":"Letícia"},
+  {"cliente":"Acqua","responsavel":"Letícia"}
+];
+</script>
+<script>
+const DB = (() => {
+  let fbApp = null, fbDb = null, ok = false;
+  let cbInventario = null, cbCasos = null, cbDonos = null, cbSync = null;
+
+  function init(callbacks) {
+    cbInventario = callbacks.onInventario;
+    cbCasos      = callbacks.onCasos;
+    cbDonos      = callbacks.onDonos;
+    cbSync       = callbacks.onSync;
+    try {
+      if (typeof firebase === 'undefined') throw new Error('SDK não carregado');
+      if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      fbApp = firebase.app();
+      fbDb  = firebase.database();
+      ok = true;
+      _listen();
+    } catch (e) {
+      console.warn('[VERIF DB] Firebase indisponível:', e.message);
+      ok = false;
+      cbSync && cbSync('offline');
+    }
+  }
+
+  function _listen() {
+    fbDb.ref('.info/connected').on('value', snap => {
+      cbSync && cbSync(snap.val() === true ? 'online' : 'offline');
+    });
+    fbDb.ref('inventario').on('value', snap => {
+      const val = snap.val() || {};
+      cbInventario && cbInventario(Object.values(val));
+    });
+    fbDb.ref('verificacao_casos').on('value', snap => {
+      cbCasos && cbCasos(snap.val() || {});
+    });
+    fbDb.ref('donos_conta').on('value', snap => {
+      const val = snap.val() || {};
+      if (Object.keys(val).length === 0) {
+        _seedDonos();
+      } else {
+        cbDonos && cbDonos(val);
+      }
+    });
+  }
+
+  function _seedDonos() {
+    const updates = {};
+    SEED_DONOS.forEach(d => {
+      const key = sanitizeKey(d.cliente);
+      if (!key) return;
+      updates[key] = { cliente: d.cliente, responsavel: d.responsavel || '' };
+    });
+    fbDb.ref('donos_conta').update(updates).catch(e => console.warn('seed donos falhou', e));
+  }
+
+  function sanitizeKey(str) {
+    return String(str || '').trim().toUpperCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[.#$\[\]\/]/g, '_')
+      .replace(/\s+/g, '_')
+      .slice(0, 120);
+  }
+
+  async function saveCaso(nf, patch) {
+    if (!ok) return { success: false };
+    const key = sanitizeKey(nf);
+    try {
+      await fbDb.ref('verificacao_casos/' + key).update(
+        Object.assign({ nf }, patch, { updatedAt: firebase.database.ServerValue.TIMESTAMP })
+      );
+      return { success: true };
+    } catch (e) { return { success: false, error: e }; }
+  }
+
+  async function addDono(cliente, responsavel) {
+    if (!ok) return { success: false };
+    const key = sanitizeKey(cliente);
+    try {
+      await fbDb.ref('donos_conta/' + key).set({ cliente: cliente.trim(), responsavel: (responsavel || '').trim() });
+      return { success: true };
+    } catch (e) { return { success: false, error: e }; }
+  }
+
+  async function updateDono(key, patch) {
+    if (!ok) return { success: false };
+    try { await fbDb.ref('donos_conta/' + key).update(patch); return { success: true }; }
+    catch (e) { return { success: false, error: e }; }
+  }
+
+  async function deleteDono(key) {
+    if (!ok) return { success: false };
+    try { await fbDb.ref('donos_conta/' + key).remove(); return { success: true }; }
+    catch (e) { return { success: false, error: e }; }
+  }
+
+  async function importDonos(list) {
+    if (!ok) return { success: false, count: 0 };
+    const updates = {};
+    list.forEach(d => {
+      const key = sanitizeKey(d.cliente);
+      if (!key) return;
+      updates[key] = { cliente: d.cliente, responsavel: d.responsavel || '' };
+    });
+    try {
+      await fbDb.ref('donos_conta').update(updates);
+      return { success: true, count: Object.keys(updates).length };
+    } catch (e) { return { success: false, count: 0, error: e }; }
+  }
+
+  return { init, saveCaso, addDono, updateDono, deleteDono, importDonos, sanitizeKey, isOk: () => ok };
+})();
+</script>
+<script>
+const App = (() => {
+  let inventarioItems = [];
+  let casos = {};
+  let donos = {};
+  let availableDays = [];
+  let selectedDay = _toDay(Date.now());
+  let expandedHist = new Set();
+
+  function init() {
+    _populateDaySelect();
+    DB.init({
+      onInventario: items => { inventarioItems = items; _populateDaySelect(); renderVerif(); },
+      onCasos:      c => { casos = c; renderVerif(); },
+      onDonos:      d => { donos = d; renderVerif(); renderDonos(); },
+      onSync:       _syncIndicator
+    });
+  }
+
+  function _toDay(ts) { return new Date(ts).toISOString().slice(0, 10); }
+  function _fmtDay(dayStr) {
+    const [y, m, d] = dayStr.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  function _normalize(s) {
+    return String(s || '').trim().toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/\s+/g, ' ');
+  }
+
+  function _syncIndicator(status) {
+    const dot = document.getElementById('sync-dot');
+    const lbl = document.getElementById('sync-label');
+    dot.className = 'dot';
+    if (status === 'online')  { lbl.textContent = 'online'; }
+    if (status === 'offline') { dot.classList.add('offline'); lbl.textContent = 'offline'; }
+    if (status === 'syncing') { dot.classList.add('syncing'); lbl.textContent = 'salvando...'; }
+  }
+
+  function _showToast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (type ? ' ' + type : '');
+    clearTimeout(t._tm);
+    t._tm = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.getElementById('tab-verif').classList.toggle('active', tab === 'verif');
+    document.getElementById('tab-donos').classList.toggle('active', tab === 'donos');
+    if (tab === 'donos') renderDonos();
+  }
+
+  function _computeAvailableDays() {
+    const set = new Set(inventarioItems.filter(i => i && i.ts).map(i => _toDay(i.ts)));
+    set.add(_toDay(Date.now()));
+    return Array.from(set).sort().reverse();
+  }
+  function _populateDaySelect() {
+    availableDays = _computeAvailableDays();
+    const today = _toDay(Date.now());
+    const sel = document.getElementById('day-select');
+    const prevValue = selectedDay;
+    sel.innerHTML = availableDays.map(d => `<option value="${d}">${_fmtDay(d)}${d === today ? ' (hoje)' : ''}</option>`).join('');
+    selectedDay = availableDays.includes(prevValue) ? prevValue : (availableDays.includes(today) ? today : availableDays[0]);
+    sel.value = selectedDay;
+    _updateDayLabel();
+  }
+  function changeDay(delta) {
+    if (!availableDays.length) return;
+    const idx = availableDays.indexOf(selectedDay);
+    let newIdx = (idx === -1 ? 0 : idx) + (delta < 0 ? 1 : -1);
+    newIdx = Math.max(0, Math.min(availableDays.length - 1, newIdx));
+    selectedDay = availableDays[newIdx];
+    document.getElementById('day-select').value = selectedDay;
+    _updateDayLabel();
+    renderVerif();
+  }
+  function onDaySelect(val) {
+    if (!val) return;
+    selectedDay = val;
+    _updateDayLabel();
+    renderVerif();
+  }
+  function goToday() {
+    selectedDay = _toDay(Date.now());
+    if (!availableDays.includes(selectedDay)) _populateDaySelect();
+    document.getElementById('day-select').value = selectedDay;
+    _updateDayLabel();
+    renderVerif();
+  }
+  function _updateDayLabel() {
+    const today = _toDay(Date.now());
+    document.getElementById('day-label').textContent = selectedDay === today ? '(hoje)' : '';
+  }
+
+  function findDono(clienteNome) {
+    const alvo = _normalize(clienteNome);
+    if (!alvo) return '';
+    const lista = Object.values(donos || {});
+    let hit = lista.find(d => _normalize(d.cliente) === alvo);
+    if (hit) return hit.responsavel || '';
+    hit = lista.find(d => {
+      const dn = _normalize(d.cliente);
+      return dn && (alvo.includes(dn) || dn.includes(alvo));
+    });
+    return hit ? (hit.responsavel || '') : '';
+  }
+
+  function buildDayRows(day) {
+    const doDia = inventarioItems.filter(i => i && i.nf && _toDay(i.ts) === day);
+    const porNf = {};
+    doDia.forEach(item => {
+      const nf = item.nf;
+      if (!porNf[nf] || item.ts > porNf[nf].ts) porNf[nf] = item;
+    });
+    const rows = Object.keys(porNf).map(nf => {
+      const item = porNf[nf];
+      const outros = inventarioItems.filter(i => i.nf === nf && _toDay(i.ts) !== day);
+      const porDia = {};
+      outros.forEach(i => {
+        const d = _toDay(i.ts);
+        if (!porDia[d] || i.ts > porDia[d].ts) porDia[d] = i;
+      });
+      const historico = Object.keys(porDia).sort().reverse().map(d => ({ day: d, item: porDia[d] }));
+
+      const key = DB.sanitizeKey(nf);
+      const caso = casos[key] || {};
+      const obsValue = ('obs' in caso) ? caso.obs : (item.obs || '');
+      return {
+        nf, item, key, historico,
+        dono: findDono(item.cliente),
+        status: caso.status || 'PENDENTE',
+        atend1: caso.atend1 || '', oper1: caso.oper1 || '',
+        atend2: caso.atend2 || '', oper2: caso.oper2 || '',
+        obs: obsValue
+      };
+    });
+    rows.sort((a, b) => b.item.ts - a.item.ts);
+    return rows;
+  }
+
+  function renderVerif() {
+    const rows = buildDayRows(selectedDay);
+    const cnt = { total: rows.length, PENDENTE: 0, EM_ANDAMENTO: 0, RESOLVIDO: 0 };
+    rows.forEach(r => cnt[r.status] = (cnt[r.status] || 0) + 1);
+    document.getElementById('cnt-total').textContent = cnt.total;
+    document.getElementById('cnt-pend').textContent = cnt.PENDENTE || 0;
+    document.getElementById('cnt-and').textContent = cnt.EM_ANDAMENTO || 0;
+    document.getElementById('cnt-res').textContent = cnt.RESOLVIDO || 0;
+
+    const q = _normalize(document.getElementById('search-verif').value);
+    const statusFiltro = document.getElementById('filter-status').value;
+    let filtradas = rows;
+    if (q) {
+      filtradas = filtradas.filter(r => {
+        const hay = _normalize([r.nf, r.item.cliente, r.item.end, r.obs, r.dono, r.item.operador].join(' '));
+        return hay.includes(q);
+      });
+    }
+    if (statusFiltro) filtradas = filtradas.filter(r => r.status === statusFiltro);
+
+    const tbody = document.getElementById('tbody-verif');
+    tbody.innerHTML = '';
+    document.getElementById('empty-verif').style.display = filtradas.length ? 'none' : 'block';
+
+    filtradas.forEach(r => {
+      const tr = document.createElement('tr');
+      const histCount = r.historico.length;
+      const histBtn = histCount
+        ? `<button class="btn-hist${expandedHist.has(r.nf) ? ' open' : ''}" data-hist-toggle="1">Histórico (${histCount})</button>`
+        : `<button class="btn-hist" disabled>—</button>`;
+      const confColor = r.item.opColor || '#1A3A6E';
+      tr.innerHTML = `
+        <td>${histBtn}</td>
+        <td class="dono">${r.dono ? _esc(r.dono) : '<span class="badge-dono-vazio">sem cadastro</span>'}</td>
+        <td>${_esc(r.item.cliente || '')}</td>
+        <td class="nf">${_esc(r.nf)}</td>
+        <td class="conferente"><span class="conf-badge"><span class="conf-dot" style="background:${confColor}"></span>${_esc(r.item.operador || '—')}</span></td>
+        <td>${_esc(r.item.vol || '')}</td>
+        <td>${_esc(r.item.end || '')}</td>
+        <td><textarea class="obs-input" data-field="obs" rows="2" placeholder="Observação / leitura">${_esc(r.obs)}</textarea></td>
+        <td><input class="cell-input" data-field="atend1" value="${_escAttr(r.atend1)}" placeholder="Nome"></td>
+        <td><input class="cell-input" data-field="oper1" value="${_escAttr(r.oper1)}" placeholder="Retorno"></td>
+        <td><input class="cell-input" data-field="atend2" value="${_escAttr(r.atend2)}" placeholder="Nome"></td>
+        <td><input class="cell-input" data-field="oper2" value="${_escAttr(r.oper2)}" placeholder="Retorno"></td>
+        <td>
+          <select class="status-sel st-${r.status}" data-field="status">
+            <option value="PENDENTE" ${r.status === 'PENDENTE' ? 'selected' : ''}>PENDENTE</option>
+            <option value="EM_ANDAMENTO" ${r.status === 'EM_ANDAMENTO' ? 'selected' : ''}>EM ANDAMENTO</option>
+            <option value="RESOLVIDO" ${r.status === 'RESOLVIDO' ? 'selected' : ''}>RESOLVIDO</option>
+          </select>
+        </td>
+      `;
+      tr.querySelectorAll('[data-field]').forEach(el => {
+        el.addEventListener('change', () => _onFieldChange(r, el));
+        if (el.tagName === 'SELECT') {
+          el.addEventListener('change', () => {
+            el.className = 'status-sel st-' + el.value;
+          });
+        }
+      });
+      const histToggle = tr.querySelector('[data-hist-toggle]');
+      if (histToggle) histToggle.addEventListener('click', () => toggleHist(r.nf));
+      tbody.appendChild(tr);
+
+      if (histCount && expandedHist.has(r.nf)) tbody.appendChild(_buildHistRow(r));
+    });
+  }
+
+  function _buildHistRow(r) {
+    const tr = document.createElement('tr');
+    tr.className = 'hist-row';
+    const linhas = r.historico.map(h => `
+      <tr>
+        <td>${_esc(_fmtDay(h.day))}</td>
+        <td>${_esc(h.item.operador || '—')}</td>
+        <td>${_esc(h.item.cliente || '')}</td>
+        <td>${_esc(h.item.vol || '')}</td>
+        <td>${_esc(h.item.end || '')}</td>
+        <td>${_esc(h.item.obs || '—')}</td>
+      </tr>`).join('');
+    tr.innerHTML = `<td colspan="13"><div class="hist-panel">
+        <div class="hp-title">Histórico anterior · NF ${_esc(r.nf)}</div>
+        <table>
+          <thead><tr><th>DATA</th><th>CONFERENTE</th><th>CLIENTE</th><th>VOL</th><th>END</th><th>OBSERVAÇÃO / LEITURA</th></tr></thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </div></td>`;
+    return tr;
+  }
+
+  function toggleHist(nf) {
+    if (expandedHist.has(nf)) expandedHist.delete(nf); else expandedHist.add(nf);
+    renderVerif();
+  }
+
+  function _onFieldChange(row, el) {
+    const field = el.dataset.field;
+    const value = el.value;
+    _syncIndicator('syncing');
+    DB.saveCaso(row.nf, { [field]: value }).then(res => {
+      _syncIndicator(DB.isOk() ? 'online' : 'offline');
+      if (res.success) _showToast('Salvo: NF ' + row.nf, 'ok');
+      else _showToast('Erro ao salvar NF ' + row.nf, 'err');
+    });
+  }
+
+  function _esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function _escAttr(s) { return _esc(s); }
+
+  function abrirNovoDono() {
+    document.getElementById('novo-dono-row').style.display = 'flex';
+    document.getElementById('nd-cliente').focus();
+  }
+  function fecharNovoDono() {
+    document.getElementById('novo-dono-row').style.display = 'none';
+    document.getElementById('nd-cliente').value = '';
+    document.getElementById('nd-resp').value = '';
+  }
+  async function salvarNovoDono() {
+    const cliente = document.getElementById('nd-cliente').value.trim();
+    const resp = document.getElementById('nd-resp').value.trim();
+    if (!cliente) { _showToast('Informe o nome do cliente', 'warn'); return; }
+    const res = await DB.addDono(cliente, resp);
+    if (res.success) { _showToast('Cliente cadastrado', 'ok'); fecharNovoDono(); }
+    else _showToast('Erro ao cadastrar', 'err');
+  }
+  function renderDonos() {
+    const q = _normalize(document.getElementById('search-donos').value);
+    let lista = Object.entries(donos || {}).map(([key, d]) => ({ key, ...d }));
+    if (q) lista = lista.filter(d => _normalize(d.cliente + ' ' + d.responsavel).includes(q));
+    lista.sort((a, b) => _normalize(a.cliente).localeCompare(_normalize(b.cliente)));
+    const tbody = document.getElementById('tbody-donos');
+    tbody.innerHTML = '';
+    lista.forEach(d => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input class="cell-input" data-f="cliente" value="${_escAttr(d.cliente)}"></td>
+        <td><input class="cell-input" data-f="responsavel" value="${_escAttr(d.responsavel)}"></td>
+        <td><button class="btn-del" title="Remover">✕</button></td>
+      `;
+      tr.querySelectorAll('[data-f]').forEach(el => {
+        el.addEventListener('change', async () => {
+          const patch = { [el.dataset.f]: el.value.trim() };
+          const res = await DB.updateDono(d.key, patch);
+          _showToast(res.success ? 'Atualizado' : 'Erro ao atualizar', res.success ? 'ok' : 'err');
+          renderVerif();
+        });
+      });
+      tr.querySelector('.btn-del').addEventListener('click', async () => {
+        if (!confirm('Remover "' + d.cliente + '" do cadastro de Dono da Conta?')) return;
+        const res = await DB.deleteDono(d.key);
+        if (res.success) _showToast('Removido', 'ok'); else _showToast('Erro ao remover', 'err');
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  function _parseWorkbookForDonos(workbook) {
+    const nomes = workbook.SheetNames.slice().sort((a, b) => {
+      const an = /novo/i.test(a) ? 0 : 1, bn = /novo/i.test(b) ? 0 : 1;
+      return an - bn;
+    });
+    for (const nome of nomes) {
+      const ws = workbook.Sheets[nome];
+      const linhas = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      for (let r = 0; r < Math.min(linhas.length, 8); r++) {
+        const linha = linhas[r] || [];
+        const clienteCol = linha.findIndex(c => _normalize(c) === 'cliente');
+        if (clienteCol === -1) continue;
+        let respCol = linha.findIndex(c => /respons.*01/.test(_normalize(c)));
+        if (respCol === -1) respCol = linha.findIndex((c, i) => i !== clienteCol && /respons/.test(_normalize(c)));
+        if (respCol === -1) continue;
+        const lista = [];
+        for (let rr = r + 1; rr < linhas.length; rr++) {
+          const cliente = String((linhas[rr] || [])[clienteCol] || '').trim();
+          if (!cliente) continue;
+          const responsavel = String((linhas[rr] || [])[respCol] || '').trim();
+          lista.push({ cliente, responsavel });
+        }
+        if (lista.length) return { sheet: nome, list: lista };
+      }
+    }
+    return null;
+  }
+
+  async function onImportFile(inputEl) {
+    const file = inputEl.files && inputEl.files[0];
+    if (!file) return;
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const parsed = _parseWorkbookForDonos(wb);
+      if (!parsed) {
+        _showToast('Não encontrei as colunas CLIENTE / RESPONSÁVEL na planilha', 'err');
+        return;
+      }
+      const ok = confirm(`Importar ${parsed.list.length} clientes da aba "${parsed.sheet}"?\nCadastros existentes serão atualizados; nada é apagado.`);
+      if (!ok) return;
+      const res = await DB.importDonos(parsed.list);
+      if (res.success) _showToast(res.count + ' clientes importados/atualizados', 'ok');
+      else _showToast('Erro ao importar', 'err');
+    } catch (e) {
+      console.error(e);
+      _showToast('Erro ao ler o arquivo', 'err');
+    } finally {
+      inputEl.value = '';
+    }
+  }
+
+  return {
+    init, switchTab, changeDay, onDaySelect, goToday, renderVerif, renderDonos,
+    abrirNovoDono, fecharNovoDono, salvarNovoDono, toggleHist, onImportFile
+  };
+})();
+
+document.addEventListener('DOMContentLoaded', App.init);
+</script>
+</body>
+</html>
