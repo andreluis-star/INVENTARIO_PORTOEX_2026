@@ -96,8 +96,29 @@
   .toast.show{transform:translateX(-50%) translateY(0);}
   .toast.ok{background:var(--green);} .toast.warn{background:var(--amber);} .toast.err{background:var(--red);}
 
+  th.sortable{cursor:pointer;user-select:none;}
+  th.sortable:hover{background:#eef1f7;}
+  .sort-arrow{display:inline-block;margin-left:4px;font-size:10px;opacity:.6;}
+  tr.filter-row th{background:#fff;padding:5px 6px;position:sticky;top:37px;z-index:18;box-shadow:0 2px 0 var(--border);}
+  .col-filter{width:100%;min-width:80px;border:1px solid var(--border);border-radius:6px;padding:5px 6px;font-size:11.5px;font-family:inherit;font-weight:500;color:var(--ink);background:#fbfbfd;}
+  .col-filter:focus{outline:none;border-color:var(--orange);background:#fff;}
+  select.col-filter{cursor:pointer;}
+
+  .dash-cards{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px;}
+  .dash-cards .card span{font-size:22px;}
+  .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;}
+  .dash-section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;}
+  .dash-section h3{margin:0 0 10px;font-size:13px;color:var(--navy);text-transform:uppercase;letter-spacing:.3px;}
+  .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .bar-label{flex:0 0 130px;font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bar-track{flex:1;background:#eef1f7;border-radius:6px;height:14px;overflow:hidden;}
+  .bar-fill{height:100%;background:var(--orange);border-radius:6px;}
+  .bar-value{flex:0 0 28px;text-align:right;font-size:12px;font-weight:700;color:var(--navy);}
+
   @media (max-width:700px){
     .summary-cards{grid-template-columns:repeat(2,1fr);}
+    .dash-cards{grid-template-columns:repeat(2,1fr);}
+    .dash-grid{grid-template-columns:1fr;}
     main{padding:10px;}
   }
 </style>
@@ -112,6 +133,7 @@
 <nav class="tabs">
   <button class="tab-btn active" data-tab="verif" onclick="App.switchTab('verif')">Verificação</button>
   <button class="tab-btn" data-tab="donos" onclick="App.switchTab('donos')">Dono da Conta</button>
+  <button class="tab-btn" data-tab="dash" onclick="App.switchTab('dash')">Dashboard</button>
 </nav>
 
 <main>
@@ -134,31 +156,43 @@
 
     <div class="searchbar">
       <input type="text" id="search-verif" placeholder="Buscar por NF, cliente, endereço, observação ou conferente..." oninput="App.renderVerif()">
-      <select id="filter-status" onchange="App.renderVerif()">
-        <option value="">Todos os status</option>
-        <option value="PENDENTE">Pendente</option>
-        <option value="EM_ANDAMENTO">Em andamento</option>
-        <option value="RESOLVIDO">Resolvido</option>
-      </select>
     </div>
 
     <div class="table-wrap">
       <table id="tbl-verif">
         <thead>
           <tr>
-            <th>HISTÓRICO</th>
-            <th>DONO DA CONTA</th>
-            <th>CLIENTE</th>
-            <th>NF/DI</th>
-            <th>CONFERENTE</th>
-            <th>VOL</th>
-            <th>END</th>
-            <th>OBSERVAÇÃO / LEITURA</th>
-            <th>1º ATEND. RETORNO</th>
-            <th>1º OPER. RETORNO</th>
-            <th>2º ATEND. RETORNO</th>
-            <th>2º OPER. RETORNO</th>
-            <th>STATUS</th>
+            <th data-col="hist">HISTÓRICO</th>
+            <th class="sortable" data-col="dono" onclick="App.sortBy('dono')">DONO DA CONTA<span class="sort-arrow"></span></th>
+            <th class="sortable" data-col="cliente" onclick="App.sortBy('cliente')">CLIENTE<span class="sort-arrow"></span></th>
+            <th class="sortable" data-col="nf" onclick="App.sortBy('nf')">NF/DI<span class="sort-arrow"></span></th>
+            <th class="sortable" data-col="conferente" onclick="App.sortBy('conferente')">CONFERENTE<span class="sort-arrow"></span></th>
+            <th class="sortable" data-col="vol" onclick="App.sortBy('vol')">VOL<span class="sort-arrow"></span></th>
+            <th class="sortable" data-col="end" onclick="App.sortBy('end')">END<span class="sort-arrow"></span></th>
+            <th class="sortable" data-col="obs" onclick="App.sortBy('obs')">OBSERVAÇÃO / LEITURA<span class="sort-arrow"></span></th>
+            <th class="sortable" data-col="atend1" onclick="App.sortBy('atend1')">ATEND. RETORNO<span class="sort-arrow"></span></th>
+            <th class="sortable" data-col="oper1" onclick="App.sortBy('oper1')">OPER. RETORNO<span class="sort-arrow"></span></th>
+            <th class="sortable" data-col="status" onclick="App.sortBy('status')">STATUS<span class="sort-arrow"></span></th>
+          </tr>
+          <tr class="filter-row">
+            <th></th>
+            <th><input type="text" class="col-filter" data-col="dono" placeholder="Filtrar..." oninput="App.renderVerif()"></th>
+            <th><input type="text" class="col-filter" data-col="cliente" placeholder="Filtrar..." oninput="App.renderVerif()"></th>
+            <th><input type="text" class="col-filter" data-col="nf" placeholder="Filtrar..." oninput="App.renderVerif()"></th>
+            <th><input type="text" class="col-filter" data-col="conferente" placeholder="Filtrar..." oninput="App.renderVerif()"></th>
+            <th><input type="text" class="col-filter" data-col="vol" placeholder="Filtrar..." oninput="App.renderVerif()"></th>
+            <th><input type="text" class="col-filter" data-col="end" placeholder="Filtrar..." oninput="App.renderVerif()"></th>
+            <th><input type="text" class="col-filter" data-col="obs" placeholder="Filtrar..." oninput="App.renderVerif()"></th>
+            <th><input type="text" class="col-filter" data-col="atend1" placeholder="Filtrar..." oninput="App.renderVerif()"></th>
+            <th><input type="text" class="col-filter" data-col="oper1" placeholder="Filtrar..." oninput="App.renderVerif()"></th>
+            <th>
+              <select class="col-filter" data-col="status" onchange="App.renderVerif()">
+                <option value="">Todos</option>
+                <option value="PENDENTE">Pendente</option>
+                <option value="EM_ANDAMENTO">Em andamento</option>
+                <option value="RESOLVIDO">Resolvido</option>
+              </select>
+            </th>
           </tr>
         </thead>
         <tbody id="tbody-verif"></tbody>
@@ -186,6 +220,30 @@
         <thead><tr><th style="width:45%">CLIENTE</th><th style="width:45%">RESPONSÁVEL</th><th></th></tr></thead>
         <tbody id="tbody-donos"></tbody>
       </table>
+    </div>
+  </section>
+
+  <section id="tab-dash" class="tab-pane">
+    <div class="dash-cards">
+      <div class="card total"><span id="dash-total">0</span><label>Total geral (NFs únicas)</label></div>
+      <div class="card pend"><span id="dash-pend">0</span><label>Pendente</label></div>
+      <div class="card and"><span id="dash-and">0</span><label>Em andamento</label></div>
+      <div class="card res"><span id="dash-res">0</span><label>Resolvido</label></div>
+      <div class="card"><span id="dash-pct">0%</span><label>% Resolvido</label></div>
+    </div>
+    <div class="dash-grid">
+      <div class="dash-section">
+        <h3>Pendências por Dono da Conta (top 10)</h3>
+        <div id="dash-rank-dono"></div>
+      </div>
+      <div class="dash-section">
+        <h3>Pendências por Cliente (top 10)</h3>
+        <div id="dash-rank-cliente"></div>
+      </div>
+    </div>
+    <div class="dash-section">
+      <h3>NFs registradas por dia (últimos dias)</h3>
+      <div id="dash-por-dia"></div>
     </div>
   </section>
 
@@ -436,13 +494,27 @@ const App = (() => {
   let availableDays = [];
   let selectedDay = _toDay(Date.now());
   let expandedHist = new Set();
+  let sortState = { col: null, dir: 1 };
+
+  const COL_ACCESSORS = {
+    dono:       r => r.dono || '',
+    cliente:    r => r.item.cliente || '',
+    nf:         r => r.nf || '',
+    conferente: r => r.item.operador || '',
+    vol:        r => r.item.vol || '',
+    end:        r => r.item.end || '',
+    obs:        r => r.obs || '',
+    atend1:     r => r.atend1 || '',
+    oper1:      r => r.oper1 || '',
+    status:     r => r.status || ''
+  };
 
   function init() {
     _populateDaySelect();
     DB.init({
-      onInventario: items => { inventarioItems = items; _populateDaySelect(); renderVerif(); },
-      onCasos:      c => { casos = c; renderVerif(); },
-      onDonos:      d => { donos = d; renderVerif(); renderDonos(); },
+      onInventario: items => { inventarioItems = items; _populateDaySelect(); renderVerif(); renderDash(); },
+      onCasos:      c => { casos = c; renderVerif(); renderDash(); },
+      onDonos:      d => { donos = d; renderVerif(); renderDonos(); renderDash(); },
       onSync:       _syncIndicator
     });
   }
@@ -479,7 +551,24 @@ const App = (() => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
     document.getElementById('tab-verif').classList.toggle('active', tab === 'verif');
     document.getElementById('tab-donos').classList.toggle('active', tab === 'donos');
+    document.getElementById('tab-dash').classList.toggle('active', tab === 'dash');
     if (tab === 'donos') renderDonos();
+    if (tab === 'dash') renderDash();
+  }
+
+  function sortBy(col) {
+    if (!COL_ACCESSORS[col]) return;
+    if (sortState.col === col) sortState.dir *= -1;
+    else { sortState.col = col; sortState.dir = 1; }
+    renderVerif();
+  }
+
+  function _updateSortArrows() {
+    document.querySelectorAll('#tbl-verif th.sortable').forEach(th => {
+      const arrow = th.querySelector('.sort-arrow');
+      if (!arrow) return;
+      arrow.textContent = th.dataset.col === sortState.col ? (sortState.dir === 1 ? '▲' : '▼') : '';
+    });
   }
 
   function _computeAvailableDays() {
@@ -581,7 +670,6 @@ const App = (() => {
     document.getElementById('cnt-res').textContent = cnt.RESOLVIDO || 0;
 
     const q = _normalize(document.getElementById('search-verif').value);
-    const statusFiltro = document.getElementById('filter-status').value;
     let filtradas = rows;
     if (q) {
       filtradas = filtradas.filter(r => {
@@ -589,7 +677,26 @@ const App = (() => {
         return hay.includes(q);
       });
     }
-    if (statusFiltro) filtradas = filtradas.filter(r => r.status === statusFiltro);
+
+    document.querySelectorAll('#tbl-verif .col-filter').forEach(el => {
+      const col = el.dataset.col;
+      const getter = COL_ACCESSORS[col];
+      if (!getter) return;
+      if (col === 'status') {
+        if (el.value) filtradas = filtradas.filter(r => getter(r) === el.value);
+      } else {
+        const v = _normalize(el.value);
+        if (v) filtradas = filtradas.filter(r => _normalize(getter(r)).includes(v));
+      }
+    });
+
+    if (sortState.col && COL_ACCESSORS[sortState.col]) {
+      const getter = COL_ACCESSORS[sortState.col];
+      filtradas = filtradas.slice().sort((a, b) =>
+        String(getter(a)).localeCompare(String(getter(b)), 'pt-BR', { numeric: true }) * sortState.dir
+      );
+    }
+    _updateSortArrows();
 
     const tbody = document.getElementById('tbody-verif');
     tbody.innerHTML = '';
@@ -613,8 +720,6 @@ const App = (() => {
         <td><textarea class="obs-input" data-field="obs" rows="2" placeholder="Observação / leitura">${_esc(r.obs)}</textarea></td>
         <td><input class="cell-input" data-field="atend1" value="${_escAttr(r.atend1)}" placeholder="Nome"></td>
         <td><input class="cell-input" data-field="oper1" value="${_escAttr(r.oper1)}" placeholder="Retorno"></td>
-        <td><input class="cell-input" data-field="atend2" value="${_escAttr(r.atend2)}" placeholder="Nome"></td>
-        <td><input class="cell-input" data-field="oper2" value="${_escAttr(r.oper2)}" placeholder="Retorno"></td>
         <td>
           <select class="status-sel st-${r.status}" data-field="status">
             <option value="PENDENTE" ${r.status === 'PENDENTE' ? 'selected' : ''}>PENDENTE</option>
@@ -651,7 +756,7 @@ const App = (() => {
         <td>${_esc(h.item.end || '')}</td>
         <td>${_esc(h.item.obs || '—')}</td>
       </tr>`).join('');
-    tr.innerHTML = `<td colspan="13"><div class="hist-panel">
+    tr.innerHTML = `<td colspan="11"><div class="hist-panel">
         <div class="hp-title">Histórico anterior · NF ${_esc(r.nf)}</div>
         <table>
           <thead><tr><th>DATA</th><th>CONFERENTE</th><th>CLIENTE</th><th>VOL</th><th>END</th><th>OBSERVAÇÃO / LEITURA</th></tr></thead>
@@ -782,9 +887,74 @@ const App = (() => {
     }
   }
 
+  function buildAllRows() {
+    const porNf = {};
+    inventarioItems.filter(i => i && i.nf).forEach(item => {
+      const nf = item.nf;
+      if (!porNf[nf] || item.ts > porNf[nf].ts) porNf[nf] = item;
+    });
+    return Object.keys(porNf).map(nf => {
+      const item = porNf[nf];
+      const key = DB.sanitizeKey(nf);
+      const caso = casos[key] || {};
+      return { nf, item, key, dono: findDono(item.cliente), status: caso.status || 'PENDENTE' };
+    });
+  }
+
+  function _renderBarList(containerId, entries) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (!entries.length) { el.innerHTML = '<div class="empty-state">Sem dados.</div>'; return; }
+    const max = Math.max(...entries.map(e => e[1]), 1);
+    el.innerHTML = entries.map(([label, val]) => `
+      <div class="bar-row">
+        <span class="bar-label" title="${_esc(label)}">${_esc(label)}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.max(4, val / max * 100)}%"></div></div>
+        <span class="bar-value">${val}</span>
+      </div>`).join('');
+  }
+
+  function renderDash() {
+    if (!document.getElementById('tab-dash')) return;
+    const rows = buildAllRows();
+    const total = rows.length;
+    const cnt = { PENDENTE: 0, EM_ANDAMENTO: 0, RESOLVIDO: 0 };
+    rows.forEach(r => cnt[r.status] = (cnt[r.status] || 0) + 1);
+    document.getElementById('dash-total').textContent = total;
+    document.getElementById('dash-pend').textContent = cnt.PENDENTE || 0;
+    document.getElementById('dash-and').textContent = cnt.EM_ANDAMENTO || 0;
+    document.getElementById('dash-res').textContent = cnt.RESOLVIDO || 0;
+    document.getElementById('dash-pct').textContent = total ? Math.round((cnt.RESOLVIDO || 0) / total * 100) + '%' : '0%';
+
+    const porDono = {};
+    rows.forEach(r => {
+      if (r.status === 'RESOLVIDO') return;
+      const d = r.dono || '(sem cadastro)';
+      porDono[d] = (porDono[d] || 0) + 1;
+    });
+    _renderBarList('dash-rank-dono', Object.entries(porDono).sort((a, b) => b[1] - a[1]).slice(0, 10));
+
+    const porCliente = {};
+    rows.forEach(r => {
+      if (r.status === 'RESOLVIDO') return;
+      const c = r.item.cliente || '(sem cliente)';
+      porCliente[c] = (porCliente[c] || 0) + 1;
+    });
+    _renderBarList('dash-rank-cliente', Object.entries(porCliente).sort((a, b) => b[1] - a[1]).slice(0, 10));
+
+    const porDia = {};
+    inventarioItems.filter(i => i && i.nf).forEach(i => {
+      const d = _toDay(i.ts);
+      (porDia[d] || (porDia[d] = new Set())).add(i.nf);
+    });
+    const dias = Object.keys(porDia).sort().reverse().slice(0, 14).reverse();
+    _renderBarList('dash-por-dia', dias.map(d => [_fmtDay(d), porDia[d].size]));
+  }
+
   return {
     init, switchTab, changeDay, onDaySelect, goToday, renderVerif, renderDonos,
-    abrirNovoDono, fecharNovoDono, salvarNovoDono, toggleHist, onImportFile
+    abrirNovoDono, fecharNovoDono, salvarNovoDono, toggleHist, onImportFile,
+    sortBy, renderDash
   };
 })();
 
