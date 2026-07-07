@@ -157,6 +157,7 @@
 
     <div class="searchbar">
       <input type="text" id="search-verif" placeholder="Buscar por NF, cliente, endereço, observação ou conferente..." oninput="App.renderVerif()">
+      <button id="btn-backfill-temp" class="btn-import" onclick="App.runBackfillImport()">⭱ Importar histórico (planilha 06/07 e anteriores)</button>
     </div>
 
     <div class="table-wrap">
@@ -255,6 +256,7 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="backfill_data.js"></script>
 <script>
 // Mesmo projeto Firebase do sistema PORTOEX Inventário — nós novos e isolados,
 // não interferem nos dados de contagem (só leitura em "inventario").
@@ -484,7 +486,32 @@ const DB = (() => {
     } catch (e) { return { success: false, count: 0, error: e }; }
   }
 
-  return { init, saveCaso, addDono, updateDono, deleteDono, importDonos, sanitizeKey, isOk: () => ok };
+  async function bulkSaveCasos(entries) {
+    // entries: [{nf, obs, status}] — grava só os campos não vazios, sem mexer em outros campos do caso.
+    if (!ok) return { success: false, written: 0 };
+    const keys = entries.map(e => sanitizeKey(e.nf));
+    const CHUNK = 400;
+    let written = 0;
+    try {
+      for (let i = 0; i < entries.length; i += CHUNK) {
+        const slice = entries.slice(i, i + CHUNK);
+        const update = {};
+        slice.forEach(e => {
+          const key = sanitizeKey(e.nf);
+          if (!key) return;
+          update['verificacao_casos/' + key + '/nf'] = e.nf;
+          if (e.obs) update['verificacao_casos/' + key + '/obs'] = e.obs;
+          if (e.status) update['verificacao_casos/' + key + '/status'] = e.status;
+          update['verificacao_casos/' + key + '/updatedAt'] = firebase.database.ServerValue.TIMESTAMP;
+        });
+        await fbDb.ref().update(update);
+        written += slice.length;
+      }
+      return { success: true, written };
+    } catch (e) { return { success: false, written, error: e }; }
+  }
+
+  return { init, saveCaso, addDono, updateDono, deleteDono, importDonos, bulkSaveCasos, sanitizeKey, isOk: () => ok };
 })();
 </script>
 <script>
@@ -790,6 +817,39 @@ const App = (() => {
   }
   function _escAttr(s) { return _esc(s); }
 
+  async function runBackfillImport() {
+    const data = window.__BACKFILL_DATA__;
+    if (!data || !data.length) { _showToast('Arquivo backfill_data.js não encontrado', 'err'); return; }
+    if (!DB.isOk()) { _showToast('Sem conexão com o banco', 'err'); return; }
+    const btn = document.getElementById('btn-backfill-temp');
+    const total = data.length;
+    if (!confirm('Importar STATUS e OBSERVAÇÃO/LEITURA de ' + total + ' NFs da planilha (06/07/2026 e anteriores)?\n\nNFs que já têm registro no sistema NÃO serão sobrescritas.')) return;
+
+    const toWrite = data.filter(e => !casos[DB.sanitizeKey(e.nf)]);
+    const skippedExisting = total - toWrite.length;
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Importando... 0/' + toWrite.length; }
+
+    const CHUNK = 400;
+    let written = 0, failed = false;
+    for (let i = 0; i < toWrite.length; i += CHUNK) {
+      const slice = toWrite.slice(i, i + CHUNK);
+      const res = await DB.bulkSaveCasos(slice);
+      if (!res.success) { failed = true; break; }
+      written += res.written;
+      if (btn) btn.textContent = 'Importando... ' + written + '/' + toWrite.length;
+    }
+
+    if (btn) { btn.disabled = false; btn.textContent = '⭱ Importar histórico (planilha 06/07 e anteriores)'; }
+
+    if (failed) {
+      _showToast('Erro durante a importação (parcial: ' + written + ' gravados)', 'err');
+    } else {
+      _showToast('Importação concluída: ' + written + ' gravados, ' + skippedExisting + ' já existentes (não sobrescritas)', 'ok');
+    }
+    console.log('[BACKFILL] total planilha:', total, '| gravados:', written, '| já existentes (puladas):', skippedExisting);
+  }
+
   function abrirNovoDono() {
     document.getElementById('novo-dono-row').style.display = 'flex';
     document.getElementById('nd-cliente').focus();
@@ -963,7 +1023,7 @@ const App = (() => {
   return {
     init, switchTab, changeDay, onDaySelect, goToday, renderVerif, renderDonos,
     abrirNovoDono, fecharNovoDono, salvarNovoDono, toggleHist, onImportFile,
-    sortBy, renderDash
+    sortBy, renderDash, runBackfillImport
   };
 })();
 
