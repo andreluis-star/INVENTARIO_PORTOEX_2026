@@ -52,7 +52,8 @@
   tbody tr:hover{background:#fafbfe;}
   td.nf{font-weight:800;color:var(--navy);white-space:nowrap;}
   td.dono{font-weight:600;color:var(--ink);white-space:nowrap;}
-  .badge-dono-vazio{color:#b3b9c4;font-style:italic;font-weight:500;}
+  .badge-dono-vazio{color:#b3b9c4;font-style:italic;font-weight:500;cursor:pointer;text-decoration:underline dotted;}
+  .badge-dono-vazio:hover{color:var(--orange);}
   .cell-input{width:100%;min-width:110px;border:1px solid transparent;border-radius:6px;padding:6px 7px;font-size:12.5px;background:transparent;font-family:inherit;}
   .cell-input:hover{border-color:var(--border);}
   .cell-input:focus{outline:none;border-color:var(--orange);background:#fff;box-shadow:0 0 0 2px rgba(232,97,26,.15);}
@@ -61,7 +62,7 @@
   .st-EM_ANDAMENTO{background:var(--blue);}
   .st-RESOLVIDO{background:var(--green);}
   .empty-state{padding:40px 20px;text-align:center;color:var(--ink-soft);font-size:14px;}
-  textarea.obs-input{width:100%;min-width:170px;min-height:38px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:6px 7px;font-size:12.5px;font-family:inherit;background:#fffdf7;}
+  textarea.obs-input{width:100%;min-width:170px;min-height:38px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:6px 7px;font-size:14.5px;font-weight:700;font-family:inherit;background:#fffdf7;}
   textarea.obs-input:focus{outline:none;border-color:var(--orange);background:#fff;box-shadow:0 0 0 2px rgba(232,97,26,.15);}
   td.conferente{white-space:nowrap;font-size:12px;}
   .conf-badge{display:inline-flex;align-items:center;gap:5px;font-weight:700;color:var(--ink);}
@@ -711,7 +712,7 @@ const App = (() => {
       const confColor = r.item.opColor || '#1A3A6E';
       tr.innerHTML = `
         <td>${histBtn}</td>
-        <td class="dono">${r.dono ? _esc(r.dono) : '<span class="badge-dono-vazio">sem cadastro</span>'}</td>
+        <td class="dono">${r.dono ? _esc(r.dono) : '<span class="badge-dono-vazio" data-goto-cadastro="1">sem cadastro</span>'}</td>
         <td>${_esc(r.item.cliente || '')}</td>
         <td class="nf">${_esc(r.nf)}</td>
         <td class="conferente"><span class="conf-badge"><span class="conf-dot" style="background:${confColor}"></span>${_esc(r.item.operador || '—')}</span></td>
@@ -738,6 +739,8 @@ const App = (() => {
       });
       const histToggle = tr.querySelector('[data-hist-toggle]');
       if (histToggle) histToggle.addEventListener('click', () => toggleHist(r.nf));
+      const donoBadge = tr.querySelector('[data-goto-cadastro]');
+      if (donoBadge) donoBadge.addEventListener('click', () => irParaCadastroDono(r.item.cliente || ''));
       tbody.appendChild(tr);
 
       if (histCount && expandedHist.has(r.nf)) tbody.appendChild(_buildHistRow(r));
@@ -790,6 +793,12 @@ const App = (() => {
   function abrirNovoDono() {
     document.getElementById('novo-dono-row').style.display = 'flex';
     document.getElementById('nd-cliente').focus();
+  }
+  function irParaCadastroDono(cliente) {
+    switchTab('donos');
+    abrirNovoDono();
+    document.getElementById('nd-cliente').value = cliente;
+    document.getElementById('nd-resp').focus();
   }
   function fecharNovoDono() {
     document.getElementById('novo-dono-row').style.display = 'none';
