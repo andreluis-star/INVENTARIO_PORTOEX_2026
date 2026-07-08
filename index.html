@@ -122,6 +122,34 @@
     .dash-grid{grid-template-columns:1fr;}
     main{padding:10px;}
   }
+
+  /* --- Programação --- */
+  .badge-tipo{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:800;color:#fff;white-space:nowrap;}
+  .tipo-COLETA{background:var(--blue);}
+  .tipo-ENTREGA{background:var(--green);}
+  .tipo-OUTRO{background:#8a8f99;}
+  .prog-day-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+  #prog-status{font-size:12px;color:var(--ink-soft);font-style:italic;}
+  td.nf-click{cursor:pointer;text-decoration:underline dotted;}
+  td.nf-click:hover{color:var(--orange);}
+
+  /* --- Modal de busca na Programação --- */
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:flex-start;justify-content:center;z-index:200;padding:40px 16px;overflow:auto;}
+  .modal-overlay.show{display:flex;}
+  .modal-box{background:#fff;border-radius:14px;max-width:1150px;width:100%;padding:20px 22px;box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative;}
+  .modal-box h2{margin:0 26px 4px 0;font-size:16px;color:var(--navy);}
+  .modal-sub{font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;}
+  .modal-close{position:absolute;top:14px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;color:var(--ink-soft);line-height:1;}
+  .modal-close:hover{color:var(--red);}
+  .modal-loading{padding:24px;text-align:center;color:var(--ink-soft);font-size:13px;}
+  .modal-body{max-height:65vh;overflow:auto;}
+  .modal-body table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:0;}
+  .modal-body thead th{background:#f8f9fc;padding:8px 6px;text-align:left;border-bottom:2px solid var(--border);white-space:nowrap;font-size:11px;color:var(--navy);position:sticky;top:0;}
+  .modal-body tbody td{padding:7px 6px;border-bottom:1px solid #eee;vertical-align:top;}
+
+  @media (max-width:700px){
+    .prog-day-cards{grid-template-columns:repeat(2,1fr);}
+  }
 </style>
 </head>
 <body>
@@ -133,6 +161,7 @@
 
 <nav class="tabs">
   <button class="tab-btn active" data-tab="verif" onclick="App.switchTab('verif')">Verificação</button>
+  <button class="tab-btn" data-tab="prog" onclick="App.switchTab('prog')">Programação</button>
   <button class="tab-btn" data-tab="donos" onclick="App.switchTab('donos')">Dono da Conta</button>
   <button class="tab-btn" data-tab="dash" onclick="App.switchTab('dash')">Dashboard</button>
 </nav>
@@ -203,6 +232,65 @@
     </div>
   </section>
 
+  <section id="tab-prog" class="tab-pane">
+    <div class="daybar">
+      <button onclick="App.progChangeDay(-1)" title="Dia anterior">‹</button>
+      <select id="prog-day-select" onchange="App.progOnDaySelect(this.value)"></select>
+      <button onclick="App.progChangeDay(1)" title="Próximo dia">›</button>
+      <button class="btn-hoje" onclick="App.progGoToday()">Hoje</button>
+      <span id="prog-day-label"></span>
+      <span id="prog-status"></span>
+    </div>
+
+    <div class="prog-day-cards">
+      <div class="card total"><span id="prog-cnt-total">0</span><label>Total do dia</label></div>
+      <div class="card"><span id="prog-cnt-coleta">0</span><label>Coleta</label></div>
+      <div class="card"><span id="prog-cnt-entrega">0</span><label>Entrega</label></div>
+      <div class="card"><span id="prog-cnt-outro">0</span><label>Outro / Embarque</label></div>
+    </div>
+
+    <div class="searchbar">
+      <input type="text" id="search-prog" placeholder="Buscar por NF, OC, DI/Cotação, MD, cliente, motorista, cidade..." oninput="App.renderProg()">
+      <button class="btn-import" onclick="App.progRefreshDay()">⟳ Atualizar dia (planilha)</button>
+    </div>
+
+    <div class="table-wrap">
+      <table id="tbl-prog">
+        <thead>
+          <tr>
+            <th>TIPO</th>
+            <th>COLETA/ENTREGA/PROCESSO/CLIENTE</th>
+            <th>MOTORISTA</th>
+            <th>PLACA</th>
+            <th>PESO</th>
+            <th>VOL</th>
+            <th>CBM/MEDIDAS</th>
+            <th>VALOR R$</th>
+            <th>DESTINATÁRIO</th>
+            <th>H. PROGRAMADA</th>
+            <th>CHEGADA</th>
+            <th>H. FINALIZOU</th>
+            <th>CIDADE DESTINO</th>
+            <th>NF</th>
+            <th>DI/COTAÇÃO / R$ / PRAZO</th>
+            <th>SERVIÇO</th>
+            <th>PAGADOR</th>
+            <th>OC</th>
+            <th>MD</th>
+            <th>RESPONSÁVEL</th>
+            <th>STATUS</th>
+            <th>END</th>
+            <th>GR</th>
+            <th>OBSERVAÇÃO</th>
+            <th>ENDEREÇO DE ENTREGA</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-prog"></tbody>
+      </table>
+      <div id="empty-prog" class="empty-state" style="display:none">Nenhuma linha de carga encontrada para este dia.</div>
+    </div>
+  </section>
+
   <section id="tab-donos" class="tab-pane">
     <div class="donos-toolbar">
       <input type="text" id="search-donos" placeholder="Buscar cliente ou responsável..." oninput="App.renderDonos()">
@@ -250,6 +338,15 @@
   </section>
 
 </main>
+
+<div id="modal-busca-prog" class="modal-overlay" onclick="if(event.target===this) App.fecharBuscaProgramacao()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="App.fecharBuscaProgramacao()">✕</button>
+    <h2 id="modal-prog-title">Buscar na Programação</h2>
+    <div class="modal-sub" id="modal-prog-sub"></div>
+    <div class="modal-body" id="modal-prog-body"></div>
+  </div>
+</div>
 
 <div id="toast" class="toast"></div>
 
@@ -515,6 +612,200 @@ const DB = (() => {
 })();
 </script>
 <script>
+// Módulo PROGRAMAÇÃO — lê ao vivo, direto do navegador, a planilha "PROGRAMAÇÃO"
+// (uma aba por dia, nome no formato DD/MM/AAAA). A planilha está compartilhada
+// como "qualquer pessoa com o link pode ver", então dá pra buscar cada aba via
+// a API pública do Google Visualization (gviz), sem precisar de backend nem de
+// login — os dados voltam sempre ao vivo, direto da fonte.
+const PROG = (() => {
+  const SHEET_ID = '1L2ySK9aDPq7jO-ZM05yeTZsv8BdnBWv0viDJvRYcMhs';
+  const cache = {}; // 'DD/MM/AAAA' -> { status:'loading'|'ok'|'notfound', rows:[...] }
+  let cbSeq = 0;
+
+  function _pad2(n) { return String(n).padStart(2, '0'); }
+  function dateStrFromOffset(offsetDays, base) {
+    const d = base ? _parseDateStr(base) : new Date();
+    d.setDate(d.getDate() + offsetDays);
+    return `${_pad2(d.getDate())}/${_pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
+  }
+  function todayStr() { return dateStrFromOffset(0); }
+  function _parseDateStr(s) {
+    const [dd, mm, yyyy] = String(s).split('/').map(Number);
+    return new Date(yyyy, (mm || 1) - 1, dd || 1);
+  }
+  function addDays(dateStr, delta) {
+    const d = _parseDateStr(dateStr);
+    d.setDate(d.getDate() + delta);
+    return `${_pad2(d.getDate())}/${_pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
+  }
+  function compareDates(a, b) { return _parseDateStr(a) - _parseDateStr(b); }
+
+  function _norm(s) {
+    return String(s == null ? '' : s).trim().toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ');
+  }
+
+  function _classify(desc) {
+    const s = _norm(desc);
+    if (s.includes('coleta')) return 'COLETA';
+    if (s.includes('entrega')) return 'ENTREGA';
+    return 'OUTRO';
+  }
+
+  // Faz o fetch de uma aba via gviz, usando JSONP (tag <script>) — funciona
+  // mesmo sem CORS liberado, porque não é um fetch/XHR, é um <script src>.
+  function _fetchSheetJSONP(sheetName) {
+    return new Promise((resolve, reject) => {
+      const cbName = '__prog_cb_' + (cbSeq++);
+      window[cbName] = (data) => {
+        resolve(data);
+        cleanup();
+      };
+      const script = document.createElement('script');
+      function cleanup() {
+        delete window[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+      }
+      const url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID +
+        '/gviz/tq?tqx=out:json;responseHandler:' + cbName +
+        '&sheet=' + encodeURIComponent(sheetName);
+      script.src = url;
+      script.onerror = () => { reject(new Error('aba não encontrada')); cleanup(); };
+      document.head.appendChild(script);
+      setTimeout(() => {
+        if (window[cbName]) { reject(new Error('timeout')); cleanup(); }
+      }, 12000);
+    });
+  }
+
+  // Layout fixo de colunas da planilha PROGRAMAÇÃO (mesma ordem em todas as
+  // abas/dias): 0 Coleta/Entrega/processo/cliente, 1 Motorista, 2 Placa, 3 Peso,
+  // 4 Volume, 5 Cbm/Medidas, 6 Valor R$, 7 Destinatário, 8 Hora programada,
+  // 9 chegada, 10 Hora finalizou, 11 Cidade Destino, 12 NF, 13 DI/Cotação,
+  // 14 Serviço, 15 Pagador, 16 OC, 17 MD, 18 Responsável, 19 Status, 20 END,
+  // 21 GR, 22 Observação, 23 Endereço de entrega.
+  function _rowsFromGviz(gviz) {
+    if (!gviz || !gviz.table) return [];
+    const cellStr = (row, i) => {
+      const c = row.c && row.c[i];
+      if (!c) return '';
+      const v = (c.f != null) ? c.f : c.v;
+      return v == null ? '' : String(v).trim();
+    };
+    const out = [];
+    (gviz.table.rows || []).forEach(row => {
+      if (!row || !row.c) return;
+      const nf = cellStr(row, 12), oc = cellStr(row, 16), di = cellStr(row, 13), md = cellStr(row, 17);
+      if (!nf && !oc && !di && !md) return; // sem nenhuma referência = linha "lixo" (aviso/veículo/branco)
+      // linha de cabeçalho vazada como dado (gviz às vezes inclui a linha de título)
+      if (_norm(nf) === 'nf' && _norm(oc) === 'oc') return;
+      const desc = cellStr(row, 0);
+      // aviso/observação que preenche a linha inteira com o mesmo texto mesclado
+      if (desc && nf === desc && oc === desc && md === desc) return;
+      out.push({
+        desc,
+        tipo: _classify(desc),
+        motorista: cellStr(row, 1),
+        placa: cellStr(row, 2),
+        peso: cellStr(row, 3),
+        vol: cellStr(row, 4),
+        cbm: cellStr(row, 5),
+        valor: cellStr(row, 6),
+        destinatario: cellStr(row, 7),
+        horaProgramada: cellStr(row, 8),
+        chegada: cellStr(row, 9),
+        horaFinalizou: cellStr(row, 10),
+        cidadeDestino: cellStr(row, 11),
+        nf, di, oc, md,
+        servico: cellStr(row, 14),
+        pagador: cellStr(row, 15),
+        responsavel: cellStr(row, 18),
+        status: cellStr(row, 19),
+        end: cellStr(row, 20),
+        gr: cellStr(row, 21),
+        obs: cellStr(row, 22),
+        enderecoEntrega: cellStr(row, 23)
+      });
+    });
+    return out;
+  }
+
+  async function loadDay(dateStr, force) {
+    if (!force && cache[dateStr] && cache[dateStr].status !== 'error') return cache[dateStr];
+    cache[dateStr] = { status: 'loading', rows: [] };
+    try {
+      const gviz = await _fetchSheetJSONP(dateStr);
+      cache[dateStr] = { status: 'ok', rows: _rowsFromGviz(gviz) };
+    } catch (e) {
+      cache[dateStr] = { status: 'notfound', rows: [], error: e.message };
+    }
+    return cache[dateStr];
+  }
+
+  async function loadRange(offsets, base) {
+    const dates = offsets.map(o => dateStrFromOffset(o, base));
+    await Promise.all(dates.map(d => loadDay(d)));
+    return dates;
+  }
+
+  function getCached(dateStr) { return cache[dateStr] || null; }
+  function cachedOkDates() {
+    return Object.keys(cache).filter(d => cache[d].status === 'ok').sort(compareDates);
+  }
+
+  function _fieldMatch(value, query) {
+    const v = _norm(value), q = _norm(query);
+    if (!v || !q) return false;
+    return v.includes(q) || q.includes(v);
+  }
+
+  function searchInCache(query) {
+    const dates = cachedOkDates();
+    const fields = ['nf', 'oc', 'di', 'md']; // ordem de prioridade pedida: 1º NF, 2º OC, 3º DI/Cotação, 4º MD
+    for (const field of fields) {
+      const matches = [];
+      dates.forEach(d => {
+        (cache[d].rows || []).forEach(row => {
+          if (_fieldMatch(row[field], query)) matches.push({ date: d, field, row });
+        });
+      });
+      if (matches.length) return { field, matches };
+    }
+    return { field: null, matches: [] };
+  }
+
+  // Busca no cache; se não achar nada, expande buscando mais dias (planilha)
+  // em lotes, até achar ou esgotar o intervalo (padrão: 30 dias pra trás e
+  // 10 pra frente a partir de hoje), já que uma carga pendente pode ter sido
+  // reprogramada para um dia bem diferente do original.
+  async function searchExpand(query, opts) {
+    opts = opts || {};
+    const back = opts.back != null ? opts.back : 30;
+    const fwd = opts.fwd != null ? opts.fwd : 10;
+    let result = searchInCache(query);
+    if (result.matches.length) return result;
+    const toLoad = [];
+    for (let o = -back; o <= fwd; o++) {
+      const d = dateStrFromOffset(o);
+      if (!cache[d]) toLoad.push(d);
+    }
+    const BATCH = 6;
+    for (let i = 0; i < toLoad.length; i += BATCH) {
+      await Promise.all(toLoad.slice(i, i + BATCH).map(d => loadDay(d)));
+      result = searchInCache(query);
+      if (result.matches.length) return result;
+    }
+    return result;
+  }
+
+  return {
+    todayStr, dateStrFromOffset, addDays, compareDates,
+    loadDay, loadRange, getCached, cachedOkDates,
+    searchInCache, searchExpand
+  };
+})();
+</script>
+<script>
 const App = (() => {
   let inventarioItems = [];
   let casos = {};
@@ -523,6 +814,7 @@ const App = (() => {
   let selectedDay = _toDay(Date.now());
   let expandedHist = new Set();
   let sortState = { col: null, dir: 1 };
+  let progSelectedDay = null;
 
   const COL_ACCESSORS = {
     dono:       r => r.dono || '',
@@ -545,6 +837,7 @@ const App = (() => {
       onDonos:      d => { donos = d; renderVerif(); renderDonos(); renderDash(); },
       onSync:       _syncIndicator
     });
+    progInit();
   }
 
   function _toDay(ts) { return new Date(ts).toISOString().slice(0, 10); }
@@ -578,8 +871,10 @@ const App = (() => {
   function switchTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
     document.getElementById('tab-verif').classList.toggle('active', tab === 'verif');
+    document.getElementById('tab-prog').classList.toggle('active', tab === 'prog');
     document.getElementById('tab-donos').classList.toggle('active', tab === 'donos');
     document.getElementById('tab-dash').classList.toggle('active', tab === 'dash');
+    if (tab === 'prog') renderProg();
     if (tab === 'donos') renderDonos();
     if (tab === 'dash') renderDash();
   }
@@ -640,6 +935,196 @@ const App = (() => {
   function _updateDayLabel() {
     const today = _toDay(Date.now());
     document.getElementById('day-label').textContent = selectedDay === today ? '(hoje)' : '';
+  }
+
+  // ---------- Aba PROGRAMAÇÃO ----------
+
+  async function progInit() {
+    progSelectedDay = PROG.todayStr();
+    await PROG.loadRange([-3, -2, -1, 0, 1, 2, 3]);
+    _populateProgDaySelect();
+    renderProg();
+  }
+
+  function _progWindowDates() {
+    const arr = [];
+    for (let o = -7; o <= 7; o++) arr.push(PROG.dateStrFromOffset(o));
+    return arr;
+  }
+
+  function _populateProgDaySelect() {
+    let dates = _progWindowDates();
+    if (progSelectedDay && !dates.includes(progSelectedDay)) dates = dates.concat([progSelectedDay]);
+    dates = Array.from(new Set(dates)).sort(PROG.compareDates);
+    const today = PROG.todayStr();
+    const sel = document.getElementById('prog-day-select');
+    if (!sel) return;
+    sel.innerHTML = dates.map(d => `<option value="${d}">${d}${d === today ? ' (hoje)' : ''}</option>`).join('');
+    sel.value = progSelectedDay;
+    _updateProgDayLabel();
+  }
+
+  function _updateProgDayLabel() {
+    const lbl = document.getElementById('prog-day-label');
+    if (!lbl) return;
+    lbl.textContent = progSelectedDay === PROG.todayStr() ? '(hoje)' : '';
+  }
+
+  async function progChangeDay(delta) {
+    progSelectedDay = PROG.addDays(progSelectedDay, delta < 0 ? -1 : 1);
+    const st = document.getElementById('prog-status');
+    if (st) st.textContent = 'carregando...';
+    await PROG.loadDay(progSelectedDay);
+    if (st) st.textContent = '';
+    _populateProgDaySelect();
+    renderProg();
+  }
+
+  async function progOnDaySelect(val) {
+    if (!val) return;
+    progSelectedDay = val;
+    const st = document.getElementById('prog-status');
+    if (st) st.textContent = 'carregando...';
+    await PROG.loadDay(progSelectedDay);
+    if (st) st.textContent = '';
+    _updateProgDayLabel();
+    renderProg();
+  }
+
+  async function progGoToday() {
+    progSelectedDay = PROG.todayStr();
+    await PROG.loadDay(progSelectedDay);
+    _populateProgDaySelect();
+    renderProg();
+  }
+
+  async function progRefreshDay() {
+    const st = document.getElementById('prog-status');
+    if (st) st.textContent = 'atualizando...';
+    await PROG.loadDay(progSelectedDay, true);
+    if (st) st.textContent = '';
+    renderProg();
+    _showToast('Dia atualizado a partir da planilha de Programação', 'ok');
+  }
+
+  function renderProg() {
+    if (!document.getElementById('tab-prog') || !progSelectedDay) return;
+    const cached = PROG.getCached(progSelectedDay);
+    const rows = (cached && cached.status === 'ok') ? cached.rows : [];
+
+    const cnt = { total: rows.length, COLETA: 0, ENTREGA: 0, OUTRO: 0 };
+    rows.forEach(r => cnt[r.tipo] = (cnt[r.tipo] || 0) + 1);
+    document.getElementById('prog-cnt-total').textContent = cnt.total;
+    document.getElementById('prog-cnt-coleta').textContent = cnt.COLETA || 0;
+    document.getElementById('prog-cnt-entrega').textContent = cnt.ENTREGA || 0;
+    document.getElementById('prog-cnt-outro').textContent = cnt.OUTRO || 0;
+
+    const q = _normalize(document.getElementById('search-prog').value);
+    let filtradas = rows;
+    if (q) {
+      filtradas = filtradas.filter(r => {
+        const hay = _normalize([r.desc, r.motorista, r.placa, r.destinatario, r.cidadeDestino,
+          r.nf, r.oc, r.di, r.md, r.responsavel, r.status, r.end, r.obs, r.enderecoEntrega].join(' '));
+        return hay.includes(q);
+      });
+    }
+
+    const tbody = document.getElementById('tbody-prog');
+    tbody.innerHTML = '';
+    const empty = document.getElementById('empty-prog');
+    empty.style.display = filtradas.length ? 'none' : 'block';
+    if (!rows.length && cached && cached.status === 'notfound') {
+      empty.textContent = 'A aba "' + progSelectedDay + '" ainda não existe na planilha de Programação (ou não foi possível carregar).';
+    } else {
+      empty.textContent = 'Nenhuma linha de carga encontrada para este dia.';
+    }
+
+    filtradas.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><span class="badge-tipo tipo-${r.tipo}">${r.tipo}</span></td>
+        <td>${_esc(r.desc)}</td>
+        <td>${_esc(r.motorista)}</td>
+        <td>${_esc(r.placa)}</td>
+        <td>${_esc(r.peso)}</td>
+        <td>${_esc(r.vol)}</td>
+        <td>${_esc(r.cbm)}</td>
+        <td>${_esc(r.valor)}</td>
+        <td>${_esc(r.destinatario)}</td>
+        <td>${_esc(r.horaProgramada)}</td>
+        <td>${_esc(r.chegada)}</td>
+        <td>${_esc(r.horaFinalizou)}</td>
+        <td>${_esc(r.cidadeDestino)}</td>
+        <td>${_esc(r.nf)}</td>
+        <td>${_esc(r.di)}</td>
+        <td>${_esc(r.servico)}</td>
+        <td>${_esc(r.pagador)}</td>
+        <td>${_esc(r.oc)}</td>
+        <td>${_esc(r.md)}</td>
+        <td>${_esc(r.responsavel)}</td>
+        <td>${_esc(r.status)}</td>
+        <td>${_esc(r.end)}</td>
+        <td>${_esc(r.gr)}</td>
+        <td>${_esc(r.obs)}</td>
+        <td>${_esc(r.enderecoEntrega)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ---------- Modal de busca (clique no NF/DI da Verificação) ----------
+
+  async function abrirBuscaProgramacao(nf) {
+    const overlay = document.getElementById('modal-busca-prog');
+    const body = document.getElementById('modal-prog-body');
+    const sub = document.getElementById('modal-prog-sub');
+    document.getElementById('modal-prog-title').textContent = 'Programação · referência ' + nf;
+    sub.textContent = '';
+    body.innerHTML = '<div class="modal-loading">Buscando na planilha de Programação (NF, OC, DI/Cotação, MD)...</div>';
+    overlay.classList.add('show');
+
+    const result = await PROG.searchExpand(nf, { back: 30, fwd: 10 });
+
+    if (!result.matches.length) {
+      sub.textContent = 'Nenhuma referência encontrada (busquei por NF, OC, DI/Cotação e MD, em cerca de 40 dias de programação).';
+      body.innerHTML = '<div class="empty-state">Nada encontrado para "' + _esc(nf) + '".</div>';
+      return;
+    }
+
+    const fieldLabel = { nf: 'NF', oc: 'OC', di: 'DI/Cotação', md: 'MD' }[result.field] || result.field;
+    sub.textContent = 'Correspondência encontrada pelo campo ' + fieldLabel + ' · ' + result.matches.length + ' ocorrência(s) na Programação.';
+
+    const linhas = result.matches
+      .slice()
+      .sort((a, b) => PROG.compareDates(b.date, a.date))
+      .map(m => `
+        <tr>
+          <td>${_esc(m.date)}</td>
+          <td><span class="badge-tipo tipo-${m.row.tipo}">${m.row.tipo}</span></td>
+          <td>${_esc(m.row.destinatario || m.row.desc)}</td>
+          <td>${_esc(m.row.cidadeDestino)}</td>
+          <td>${_esc(m.row.nf)}</td>
+          <td>${_esc(m.row.oc)}</td>
+          <td>${_esc(m.row.di)}</td>
+          <td>${_esc(m.row.md)}</td>
+          <td>${_esc(m.row.status)}</td>
+          <td>${_esc(m.row.end)}</td>
+          <td>${_esc(m.row.obs)}</td>
+          <td>${_esc(m.row.motorista)} ${_esc(m.row.placa)}</td>
+        </tr>`).join('');
+
+    body.innerHTML = `
+      <table>
+        <thead><tr>
+          <th>DATA</th><th>TIPO</th><th>DESTINATÁRIO</th><th>CIDADE DESTINO</th>
+          <th>NF</th><th>OC</th><th>DI/COTAÇÃO</th><th>MD</th><th>STATUS</th><th>END</th><th>OBSERVAÇÃO</th><th>MOTORISTA/PLACA</th>
+        </tr></thead>
+        <tbody>${linhas}</tbody>
+      </table>`;
+  }
+
+  function fecharBuscaProgramacao() {
+    document.getElementById('modal-busca-prog').classList.remove('show');
   }
 
   function findDono(clienteNome) {
@@ -741,7 +1226,7 @@ const App = (() => {
         <td>${histBtn}</td>
         <td class="dono">${r.dono ? _esc(r.dono) : '<span class="badge-dono-vazio" data-goto-cadastro="1">sem cadastro</span>'}</td>
         <td>${_esc(r.item.cliente || '')}</td>
-        <td class="nf">${_esc(r.nf)}</td>
+        <td class="nf nf-click" data-goto-prog="1" title="Ver esta referência na Programação">${_esc(r.nf)}</td>
         <td class="conferente"><span class="conf-badge"><span class="conf-dot" style="background:${confColor}"></span>${_esc(r.item.operador || '—')}</span></td>
         <td>${_esc(r.item.vol || '')}</td>
         <td>${_esc(r.item.end || '')}</td>
@@ -768,6 +1253,8 @@ const App = (() => {
       if (histToggle) histToggle.addEventListener('click', () => toggleHist(r.nf));
       const donoBadge = tr.querySelector('[data-goto-cadastro]');
       if (donoBadge) donoBadge.addEventListener('click', () => irParaCadastroDono(r.item.cliente || ''));
+      const nfCell = tr.querySelector('[data-goto-prog]');
+      if (nfCell) nfCell.addEventListener('click', () => abrirBuscaProgramacao(r.nf));
       tbody.appendChild(tr);
 
       if (histCount && expandedHist.has(r.nf)) tbody.appendChild(_buildHistRow(r));
@@ -1023,7 +1510,9 @@ const App = (() => {
   return {
     init, switchTab, changeDay, onDaySelect, goToday, renderVerif, renderDonos,
     abrirNovoDono, fecharNovoDono, salvarNovoDono, toggleHist, onImportFile,
-    sortBy, renderDash, runBackfillImport
+    sortBy, renderDash, runBackfillImport,
+    progChangeDay, progOnDaySelect, progGoToday, progRefreshDay, renderProg,
+    abrirBuscaProgramacao, fecharBuscaProgramacao
   };
 })();
 
