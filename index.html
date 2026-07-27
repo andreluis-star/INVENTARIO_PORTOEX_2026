@@ -45,7 +45,7 @@
   .searchbar input[type=text]{flex:1;min-width:220px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;}
   .searchbar select{border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;background:#fff;}
 
-  .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:auto;}
+  .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:auto;max-height:calc(100vh - 230px);}
   table{border-collapse:collapse;width:100%;font-size:13px;min-width:1200px;}
   thead th{background:#f8f9fc;color:var(--navy);font-weight:800;text-align:left;padding:10px 8px;border-bottom:2px solid var(--border);position:sticky;top:0;white-space:nowrap;font-size:11.5px;letter-spacing:.2px;}
   tbody td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle;}
@@ -213,8 +213,6 @@
             <th class="sortable" data-col="vol" onclick="App.sortBy('vol')">VOL<span class="sort-arrow"></span></th>
             <th class="sortable" data-col="end" onclick="App.sortBy('end')">END<span class="sort-arrow"></span></th>
             <th class="sortable" data-col="obs" onclick="App.sortBy('obs')">OBSERVAÇÃO / LEITURA<span class="sort-arrow"></span></th>
-            <th class="sortable" data-col="atend1" onclick="App.sortBy('atend1')">ATEND. RETORNO<span class="sort-arrow"></span></th>
-            <th class="sortable" data-col="oper1" onclick="App.sortBy('oper1')">OPER. RETORNO<span class="sort-arrow"></span></th>
             <th class="sortable" data-col="status" onclick="App.sortBy('status')">STATUS<span class="sort-arrow"></span></th>
             <th data-col="progcheck" title="Confere a NF/OC/DI/MD na Programação em 3 dias antes, hoje e 3 dias depois">PROGRAMAÇÃO (±3 DIAS)</th>
             <th data-col="progservico">TIPO DE SERVIÇO</th>
@@ -228,8 +226,6 @@
             <th><input type="text" class="col-filter" data-col="vol" placeholder="Filtrar..." oninput="App.renderVerif()"></th>
             <th><input type="text" class="col-filter" data-col="end" placeholder="Filtrar..." oninput="App.renderVerif()"></th>
             <th><input type="text" class="col-filter" data-col="obs" placeholder="Filtrar..." oninput="App.renderVerif()"></th>
-            <th><input type="text" class="col-filter" data-col="atend1" placeholder="Filtrar..." oninput="App.renderVerif()"></th>
-            <th><input type="text" class="col-filter" data-col="oper1" placeholder="Filtrar..." oninput="App.renderVerif()"></th>
             <th>
               <select class="col-filter" data-col="status" onchange="App.renderVerif()">
                 <option value="">Todos</option>
@@ -872,8 +868,6 @@ const App = (() => {
     vol:        r => r.item.vol || '',
     end:        r => r.item.end || '',
     obs:        r => r.obs || '',
-    atend1:     r => r.atend1 || '',
-    oper1:      r => r.oper1 || '',
     status:     r => r.status || ''
   };
 
@@ -1279,8 +1273,6 @@ const App = (() => {
         <td>${_esc(r.item.vol || '')}</td>
         <td>${_esc(r.item.end || '')}</td>
         <td><textarea class="obs-input" data-field="obs" rows="2" placeholder="Observação / leitura">${_esc(r.obs)}</textarea></td>
-        <td><input class="cell-input" data-field="atend1" value="${_escAttr(r.atend1)}" placeholder="Nome"></td>
-        <td><input class="cell-input" data-field="oper1" value="${_escAttr(r.oper1)}" placeholder="Retorno"></td>
         <td>
           <select class="status-sel st-${r.status}" data-field="status">
             <option value="PENDENTE" ${r.status === 'PENDENTE' ? 'selected' : ''}>PENDENTE</option>
@@ -1382,7 +1374,7 @@ const App = (() => {
         <td>${_esc(h.item.end || '')}</td>
         <td>${_esc(h.item.obs || '—')}</td>
       </tr>`).join('');
-    tr.innerHTML = `<td colspan="13"><div class="hist-panel">
+    tr.innerHTML = `<td colspan="11"><div class="hist-panel">
         <div class="hp-title">Histórico anterior · NF ${_esc(r.nf)}</div>
         <table>
           <thead><tr><th>DATA</th><th>CONFERENTE</th><th>CLIENTE</th><th>VOL</th><th>END</th><th>OBSERVAÇÃO / LEITURA</th></tr></thead>
