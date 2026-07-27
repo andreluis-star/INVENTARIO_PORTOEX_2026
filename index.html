@@ -128,6 +128,18 @@
   .tipo-COLETA{background:var(--blue);}
   .tipo-ENTREGA{background:var(--green);}
   .tipo-OUTRO{background:#8a8f99;}
+
+  /* --- Conferência com a Programação (colunas novas da Verificação) --- */
+  td.prog-check{white-space:nowrap;font-size:12px;text-align:center;}
+  td.prog-servico{white-space:nowrap;text-align:center;}
+  .prog-loading{color:#b3b9c4;font-style:italic;}
+  .prog-nc{display:inline-block;padding:3px 9px;border-radius:6px;font-size:11.5px;font-weight:800;color:#8a8f99;background:#f1f2f5;letter-spacing:.5px;}
+  .prog-hit{display:inline-block;padding:3px 9px;border-radius:6px;font-size:11.5px;font-weight:800;color:#fff;background:var(--green);white-space:nowrap;margin:1px;}
+  .serv-badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:11.5px;font-weight:800;white-space:nowrap;margin:1px;text-transform:uppercase;letter-spacing:.3px;}
+  .serv-EXPRESSO{color:var(--red);background:#fdecea;}
+  .serv-ECONOMICO{color:var(--blue);background:#e8f2fc;}
+  .serv-PERSONALIZADO{color:var(--red);background:#000;}
+  .serv-OUTRO{color:var(--ink-soft);background:#f1f2f5;}
   .prog-day-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
   #prog-status{font-size:12px;color:var(--ink-soft);font-style:italic;}
   td.nf-click{cursor:pointer;text-decoration:underline dotted;}
@@ -204,6 +216,8 @@
             <th class="sortable" data-col="atend1" onclick="App.sortBy('atend1')">ATEND. RETORNO<span class="sort-arrow"></span></th>
             <th class="sortable" data-col="oper1" onclick="App.sortBy('oper1')">OPER. RETORNO<span class="sort-arrow"></span></th>
             <th class="sortable" data-col="status" onclick="App.sortBy('status')">STATUS<span class="sort-arrow"></span></th>
+            <th data-col="progcheck" title="Confere a NF/OC/DI/MD na Programação em 3 dias antes, hoje e 3 dias depois">PROGRAMAÇÃO (±3 DIAS)</th>
+            <th data-col="progservico">TIPO DE SERVIÇO</th>
           </tr>
           <tr class="filter-row">
             <th></th>
@@ -224,6 +238,8 @@
                 <option value="RESOLVIDO">Resolvido</option>
               </select>
             </th>
+            <th></th>
+            <th></th>
           </tr>
         </thead>
         <tbody id="tbody-verif"></tbody>
@@ -798,10 +814,42 @@ const PROG = (() => {
     return result;
   }
 
+  // Datas de uma janela fixa (ex.: 3 dias antes, hoje e 3 dias depois) a partir
+  // de uma base (padrão: hoje).
+  function windowDates(base, back, fwd) {
+    const arr = [];
+    for (let o = -back; o <= fwd; o++) arr.push(dateStrFromOffset(o, base));
+    return arr;
+  }
+
+  // Garante que todas as abas dessa janela estejam carregadas no cache.
+  async function ensureWindow(base, back, fwd) {
+    const dates = windowDates(base, back, fwd);
+    await Promise.all(dates.map(d => loadDay(d)));
+    return dates;
+  }
+
+  // Busca uma referência (NF/OC/DI/MD) SOMENTE nas datas informadas.
+  function searchInDates(query, dates) {
+    const fields = ['nf', 'oc', 'di', 'md'];
+    const matches = [];
+    (dates || []).forEach(d => {
+      const c = cache[d];
+      if (!c || c.status !== 'ok') return;
+      (c.rows || []).forEach(row => {
+        for (const f of fields) {
+          if (_fieldMatch(row[f], query)) { matches.push({ date: d, field: f, row }); break; }
+        }
+      });
+    });
+    return matches;
+  }
+
   return {
     todayStr, dateStrFromOffset, addDays, compareDates,
     loadDay, loadRange, getCached, cachedOkDates,
-    searchInCache, searchExpand
+    searchInCache, searchExpand,
+    windowDates, ensureWindow, searchInDates
   };
 })();
 </script>
@@ -1240,6 +1288,8 @@ const App = (() => {
             <option value="RESOLVIDO" ${r.status === 'RESOLVIDO' ? 'selected' : ''}>RESOLVIDO</option>
           </select>
         </td>
+        <td class="prog-check" data-nf="${_escAttr(r.nf)}"><span class="prog-loading">...</span></td>
+        <td class="prog-servico"></td>
       `;
       tr.querySelectorAll('[data-field]').forEach(el => {
         el.addEventListener('change', () => _onFieldChange(r, el));
@@ -1259,6 +1309,65 @@ const App = (() => {
 
       if (histCount && expandedHist.has(r.nf)) tbody.appendChild(_buildHistRow(r));
     });
+
+    _fillProgChecks();
+  }
+
+  // ---------- Conferência das novas colunas com a Programação ----------
+
+  const PROG_CHK_BACK = 3, PROG_CHK_FWD = 3;
+  let _progChkReady = null;
+
+  function _ensureProgChkWindow() {
+    if (!_progChkReady) {
+      _progChkReady = PROG.ensureWindow(PROG.todayStr(), PROG_CHK_BACK, PROG_CHK_FWD);
+    }
+    return _progChkReady;
+  }
+
+  function _servicoClass(s) {
+    const n = _normalize(s);
+    if (!n) return null;
+    if (n.includes('express')) return 'EXPRESSO';
+    if (n.includes('econom')) return 'ECONOMICO';
+    if (n.includes('personal')) return 'PERSONALIZADO';
+    return 'OUTRO';
+  }
+
+  // Para cada linha visível, procura a NF/OC/DI/MD na Programação dentro da
+  // janela de 3 dias antes, hoje e 3 dias depois. Mostra a(s) data(s)
+  // encontrada(s) (ou "N/C") e o tipo de serviço colorido.
+  async function _fillProgChecks() {
+    await _ensureProgChkWindow();
+    const dates = PROG.windowDates(PROG.todayStr(), PROG_CHK_BACK, PROG_CHK_FWD);
+    document.querySelectorAll('#tbody-verif td.prog-check[data-nf]').forEach(td => {
+      const nf = td.getAttribute('data-nf');
+      const servTd = td.nextElementSibling;
+      if (!nf) {
+        td.innerHTML = '<span class="prog-nc">N/C</span>';
+        if (servTd) servTd.innerHTML = '';
+        return;
+      }
+      const matches = PROG.searchInDates(nf, dates);
+      if (!matches.length) {
+        td.innerHTML = '<span class="prog-nc">N/C</span>';
+        if (servTd) servTd.innerHTML = '';
+        return;
+      }
+      const uniqDates = Array.from(new Set(matches.map(m => m.date))).sort(PROG.compareDates);
+      td.innerHTML = uniqDates.map(d => `<span class="prog-hit">${_esc(d)}</span>`).join(' ');
+
+      if (servTd) {
+        const servs = [];
+        matches.forEach(m => {
+          const s = (m.row.servico || '').trim();
+          if (s && !servs.some(x => _normalize(x) === _normalize(s))) servs.push(s);
+        });
+        servTd.innerHTML = servs.length
+          ? servs.map(s => `<span class="serv-badge serv-${_servicoClass(s) || 'OUTRO'}">${_esc(s)}</span>`).join(' ')
+          : '';
+      }
+    });
   }
 
   function _buildHistRow(r) {
@@ -1273,7 +1382,7 @@ const App = (() => {
         <td>${_esc(h.item.end || '')}</td>
         <td>${_esc(h.item.obs || '—')}</td>
       </tr>`).join('');
-    tr.innerHTML = `<td colspan="11"><div class="hist-panel">
+    tr.innerHTML = `<td colspan="13"><div class="hist-panel">
         <div class="hp-title">Histórico anterior · NF ${_esc(r.nf)}</div>
         <table>
           <thead><tr><th>DATA</th><th>CONFERENTE</th><th>CLIENTE</th><th>VOL</th><th>END</th><th>OBSERVAÇÃO / LEITURA</th></tr></thead>
