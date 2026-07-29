@@ -768,7 +768,11 @@ const PROG = (() => {
   function _fieldMatch(value, query) {
     const v = _norm(value), q = _norm(query);
     if (!v || !q) return false;
-    return v.includes(q) || q.includes(v);
+    // Correspondência EXATA: o campo inteiro deve ser igual à busca, ou (para
+    // células com múltiplos valores) um dos "pedaços" separados por espaço,
+    // vírgula, ponto-e-vírgula, barra ou "|" deve ser exatamente igual.
+    if (v === q) return true;
+    return v.split(/[\s,;/|]+/).some(tok => tok && tok === q);
   }
 
   function searchInCache(query) {
