@@ -141,6 +141,30 @@
   .serv-PERSONALIZADO{color:var(--red);background:#000;}
   .serv-OUTRO{color:var(--ink-soft);background:#f1f2f5;}
   .prog-day-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+
+  /* ---- Conciliação ---- */
+  .card.furo span{color:var(--red);}
+  .concil-hint{font-size:12.5px;color:var(--ink-soft);margin:0 0 12px;line-height:1.5;}
+  .filtro-sel{border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;background:#fff;font-weight:600;color:var(--ink);}
+  .sit-badge{display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:800;color:#fff;white-space:nowrap;text-transform:uppercase;letter-spacing:.3px;}
+  .sit-FURO{background:var(--red);}
+  .sit-PARADO{background:var(--amber);}
+  .sit-PROGRAMADO{background:var(--green);}
+  tr.row-FURO{background:#fdf1f0;}
+  .lido-sim{display:inline-flex;flex-direction:column;gap:1px;font-size:11.5px;color:var(--green);font-weight:700;}
+  .lido-sim small{color:var(--ink-soft);font-weight:600;}
+  .lido-nao{display:inline-block;padding:3px 9px;border-radius:6px;font-size:11.5px;font-weight:800;color:#fff;background:var(--red);letter-spacing:.3px;}
+  .saida-nc{display:inline-block;padding:3px 9px;border-radius:6px;font-size:11.5px;font-weight:800;color:#fff;background:var(--amber);letter-spacing:.3px;}
+  .saida-hit{display:block;font-size:11.5px;font-weight:700;color:var(--ink);margin:1px 0;}
+  .saida-hit b{color:var(--green);}
+  .saida-hit small{color:var(--ink-soft);font-weight:600;}
+  .concil-diag{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:14px;font-size:12.5px;}
+  .concil-diag h4{margin:0 0 8px;color:var(--navy);font-size:13px;}
+  .concil-diag .diag-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;}
+  .concil-diag table{width:100%;border-collapse:collapse;}
+  .concil-diag th,.concil-diag td{text-align:left;padding:3px 6px;border-bottom:1px solid #eee;vertical-align:top;}
+  .concil-diag td.n{text-align:right;font-weight:700;color:var(--navy);white-space:nowrap;}
+  .diag-close{float:right;cursor:pointer;color:var(--ink-soft);font-weight:800;border:none;background:none;font-size:15px;}
   #prog-status{font-size:12px;color:var(--ink-soft);font-style:italic;}
   td.nf-click{cursor:pointer;text-decoration:underline dotted;}
   td.nf-click:hover{color:var(--orange);}
@@ -174,6 +198,7 @@
 <nav class="tabs">
   <button class="tab-btn active" data-tab="verif" onclick="App.switchTab('verif')">Verificação</button>
   <button class="tab-btn" data-tab="prog" onclick="App.switchTab('prog')">Programação</button>
+  <button class="tab-btn" data-tab="concil" onclick="App.switchTab('concil')">Conciliação</button>
   <button class="tab-btn" data-tab="donos" onclick="App.switchTab('donos')">Dono da Conta</button>
   <button class="tab-btn" data-tab="dash" onclick="App.switchTab('dash')">Dashboard</button>
 </nav>
@@ -300,6 +325,59 @@
         <tbody id="tbody-prog"></tbody>
       </table>
       <div id="empty-prog" class="empty-state" style="display:none">Nenhuma linha de carga encontrada para este dia.</div>
+    </div>
+  </section>
+
+  <section id="tab-concil" class="tab-pane">
+    <div class="daybar">
+      <button onclick="App.concilChangeDay(-1)" title="Dia anterior">‹</button>
+      <select id="concil-day-select" onchange="App.concilOnDaySelect(this.value)"></select>
+      <button onclick="App.concilChangeDay(1)" title="Próximo dia">›</button>
+      <button class="btn-hoje" onclick="App.concilGoOntem()">Ontem</button>
+      <button class="btn-import" onclick="App.concilRefresh()">⟳ Atualizar</button>
+      <span id="concil-day-label"></span>
+      <span id="concil-status"></span>
+    </div>
+
+    <p class="concil-hint">Base: <b>descargas (COLETA)</b> do dia selecionado. <b>Programado</b> = tem embarque/entrega no próprio dia da coleta ou nos próximos 5 dias (conta mesmo sem leitura, pois pode ter saído antes do inventário) · <b>Parado</b> = lido, sem saída programada · <b>Não lido (furo)</b> = não foi lido <u>e</u> não tem saída.</p>
+
+    <div class="summary-cards">
+      <div class="card total"><span id="concil-cnt-total">0</span><label>Chegaram (COLETA)</label></div>
+      <div class="card res"><span id="concil-cnt-prog">0</span><label>Programado (saída ok)</label></div>
+      <div class="card pend"><span id="concil-cnt-parado">0</span><label>Parado (sem saída)</label></div>
+      <div class="card furo"><span id="concil-cnt-furo">0</span><label>Não lido (furo)</label></div>
+    </div>
+
+    <div class="searchbar">
+      <input type="text" id="search-concil" placeholder="Buscar por NF, destinatário, cidade, motorista..." oninput="App.renderConcil()">
+      <select id="concil-filtro" class="filtro-sel" onchange="App.renderConcil()">
+        <option value="">Todas as situações</option>
+        <option value="FURO">Só não lidos (furo)</option>
+        <option value="PARADO">Só parados (sem saída)</option>
+        <option value="PROGRAMADO">Só programados</option>
+      </select>
+      <button class="btn-import" onclick="App.concilDiagRun()">🔍 Diagnóstico de furos (14 dias)</button>
+    </div>
+
+    <div id="concil-diag" class="concil-diag" style="display:none"></div>
+
+    <div class="table-wrap">
+      <table id="tbl-concil">
+        <thead>
+          <tr>
+            <th>SITUAÇÃO</th>
+            <th>NF</th>
+            <th>DESTINATÁRIO / CLIENTE</th>
+            <th>CIDADE DESTINO</th>
+            <th>VOL</th>
+            <th>VEÍCULO CHEGADA</th>
+            <th>LIDO NO INVENTÁRIO?</th>
+            <th>SAÍDA PROGRAMADA (PRÓX. 5 DIAS)</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-concil"></tbody>
+      </table>
+      <div id="empty-concil" class="empty-state" style="display:none">Nenhuma descarga (COLETA) encontrada na Programação deste dia.</div>
     </div>
   </section>
 
@@ -863,6 +941,8 @@ const App = (() => {
   let expandedHist = new Set();
   let sortState = { col: null, dir: 1 };
   let progSelectedDay = null;
+  let concilSelectedDay = null;
+  let concilRows = [];
 
   const COL_ACCESSORS = {
     dono:       r => r.dono || '',
@@ -918,9 +998,11 @@ const App = (() => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
     document.getElementById('tab-verif').classList.toggle('active', tab === 'verif');
     document.getElementById('tab-prog').classList.toggle('active', tab === 'prog');
+    document.getElementById('tab-concil').classList.toggle('active', tab === 'concil');
     document.getElementById('tab-donos').classList.toggle('active', tab === 'donos');
     document.getElementById('tab-dash').classList.toggle('active', tab === 'dash');
     if (tab === 'prog') renderProg();
+    if (tab === 'concil') concilOpen();
     if (tab === 'donos') renderDonos();
     if (tab === 'dash') renderDash();
   }
@@ -1171,6 +1253,264 @@ const App = (() => {
 
   function fecharBuscaProgramacao() {
     document.getElementById('modal-busca-prog').classList.remove('show');
+  }
+
+  // ---------- Conciliação (descargas × inventário × saída programada) ----------
+  // Base: linhas COLETA (mercadoria que entrou no pátio) na Programação do dia
+  // selecionado (padrão: ontem). Para cada NF que chegou, verifica:
+  //  1) se o conferente LEU no inventário (existe em inventarioItems);
+  //  2) se há SAÍDA programada (EMBARQUE/ENTREGA) no próprio dia da coleta ou
+  //     nos próximos 5 dias (linha que não seja outra COLETA).
+  // Situações: PROGRAMADO (tem saída, mesmo sem leitura) · PARADO (lido, sem
+  // saída) · FURO (não lido E sem saída). Furo só quando realmente não há saída,
+  // porque cargas que chegam e saem no mesmo dia já foram carregadas antes do
+  // inventário.
+  const CONCIL_FWD = 5;
+
+  function _ontemStr() { return PROG.dateStrFromOffset(-1); }
+
+  function _populateConcilDaySelect() {
+    const sel = document.getElementById('concil-day-select');
+    if (!sel) return;
+    let dates = [];
+    for (let o = -14; o <= 1; o++) dates.push(PROG.dateStrFromOffset(o));
+    if (concilSelectedDay && !dates.includes(concilSelectedDay)) dates.push(concilSelectedDay);
+    dates = Array.from(new Set(dates)).sort(PROG.compareDates).reverse();
+    const hoje = PROG.todayStr(), ontem = _ontemStr();
+    sel.innerHTML = dates.map(d => {
+      const tag = d === hoje ? ' (hoje)' : (d === ontem ? ' (ontem)' : '');
+      return `<option value="${d}" ${d === concilSelectedDay ? 'selected' : ''}>${d}${tag}</option>`;
+    }).join('');
+  }
+
+  function _updateConcilDayLabel() {
+    const lbl = document.getElementById('concil-day-label');
+    if (!lbl) return;
+    lbl.textContent = concilSelectedDay === PROG.todayStr() ? '(hoje)'
+      : (concilSelectedDay === _ontemStr() ? '(ontem)' : '');
+  }
+
+  async function concilOpen() {
+    if (!document.getElementById('tab-concil')) return;
+    if (!concilSelectedDay) concilSelectedDay = _ontemStr();
+    _populateConcilDaySelect();
+    _updateConcilDayLabel();
+    await _concilLoad();
+  }
+
+  async function _concilLoad(force) {
+    const st = document.getElementById('concil-status');
+    if (st) st.textContent = 'carregando...';
+    await PROG.loadDay(concilSelectedDay, force);
+    const fwdDates = [];
+    for (let o = 1; o <= CONCIL_FWD; o++) fwdDates.push(PROG.addDays(concilSelectedDay, o));
+    await Promise.all(fwdDates.map(d => PROG.loadDay(d, force)));
+    if (st) st.textContent = '';
+    _concilBuild(fwdDates);
+    renderConcil();
+  }
+
+  function _concilInventIndex() {
+    const idx = {};
+    inventarioItems.forEach(i => {
+      if (!i || !i.nf) return;
+      const k = _normalize(i.nf);
+      if (!idx[k] || i.ts > idx[k].ts) idx[k] = i;
+    });
+    return idx;
+  }
+
+  function _concilBuild(fwdDates) {
+    const cached = PROG.getCached(concilSelectedDay);
+    const rows = (cached && cached.status === 'ok') ? cached.rows : [];
+    const chegadas = rows.filter(r => r.tipo === 'COLETA' && (r.nf || r.oc || r.di || r.md));
+    const porRef = {};
+    chegadas.forEach(r => {
+      const ref = (r.nf || r.oc || r.di || r.md || '').trim();
+      if (ref && !porRef[ref]) porRef[ref] = r;
+    });
+    const lidoPorNf = _concilInventIndex();
+    // Saída = EMBARQUE/ENTREGA (qualquer linha que não seja outra COLETA), no
+    // PRÓPRIO dia da coleta ou nos próximos 5 dias. Inclui o dia da coleta porque
+    // algumas cargas chegam e saem no mesmo dia — quando o conferente vai ler o
+    // armazém elas já foram carregadas, então NÃO são furo.
+    const saidaDates = [concilSelectedDay].concat(fwdDates);
+    concilRows = Object.keys(porRef).map(ref => {
+      const r = porRef[ref];
+      const nf = (r.nf || '').trim() || ref;
+      const leitura = lidoPorNf[_normalize(nf)] || null;
+      const saidas = PROG.searchInDates(nf, saidaDates).filter(m => m.row.tipo !== 'COLETA');
+      let situacao;
+      if (saidas.length) situacao = 'PROGRAMADO';   // tem embarque/entrega → ok, mesmo sem leitura
+      else if (leitura) situacao = 'PARADO';         // lido, parado no pátio, sem saída
+      else situacao = 'FURO';                        // não lido E sem saída → furo real
+      return { ref, nf, row: r, leitura, saidas, situacao };
+    });
+  }
+
+  function renderConcil() {
+    if (!document.getElementById('tab-concil')) return;
+    const cnt = { total: concilRows.length, PROGRAMADO: 0, PARADO: 0, FURO: 0 };
+    concilRows.forEach(r => cnt[r.situacao]++);
+    document.getElementById('concil-cnt-total').textContent = cnt.total;
+    document.getElementById('concil-cnt-prog').textContent = cnt.PROGRAMADO;
+    document.getElementById('concil-cnt-parado').textContent = cnt.PARADO;
+    document.getElementById('concil-cnt-furo').textContent = cnt.FURO;
+
+    const q = _normalize(document.getElementById('search-concil').value);
+    const filtro = document.getElementById('concil-filtro').value;
+    let lista = concilRows.slice();
+    if (filtro) lista = lista.filter(r => r.situacao === filtro);
+    if (q) lista = lista.filter(r => {
+      const hay = _normalize([r.nf, r.row.destinatario, r.row.desc, r.row.cidadeDestino,
+        r.row.motorista, r.row.placa, r.row.oc, r.row.di, r.row.md].join(' '));
+      return hay.includes(q);
+    });
+    const ordem = { FURO: 0, PARADO: 1, PROGRAMADO: 2 };
+    lista.sort((a, b) => (ordem[a.situacao] - ordem[b.situacao]) || String(a.nf).localeCompare(String(b.nf)));
+
+    const tbody = document.getElementById('tbody-concil');
+    tbody.innerHTML = '';
+    const empty = document.getElementById('empty-concil');
+    const cached = PROG.getCached(concilSelectedDay);
+    empty.style.display = lista.length ? 'none' : 'block';
+    if (cached && cached.status === 'notfound')
+      empty.textContent = 'A aba "' + concilSelectedDay + '" ainda não existe na planilha de Programação.';
+    else if (!concilRows.length)
+      empty.textContent = 'Nenhuma descarga (COLETA) encontrada na Programação deste dia.';
+    else
+      empty.textContent = 'Nenhum item corresponde ao filtro/busca.';
+
+    const labelSit = { FURO: 'Não lido · furo', PARADO: 'Parado', PROGRAMADO: 'Programado' };
+    lista.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.className = 'row-' + r.situacao;
+      const lidoHtml = r.leitura
+        ? `<span class="lido-sim">LIDO<small>${_esc(_fmtDay(_toDay(r.leitura.ts)))} · ${_esc(r.leitura.operador || '—')}</small></span>`
+        : `<span class="lido-nao">NÃO LIDO</span>`;
+      let saidaHtml;
+      if (r.saidas.length) {
+        const uniq = {};
+        r.saidas.forEach(m => { if (!uniq[m.date]) uniq[m.date] = m.row; });
+        saidaHtml = Object.keys(uniq).sort(PROG.compareDates).map(d => {
+          const row = uniq[d];
+          const veic = [row.motorista, row.placa].filter(Boolean).join(' · ');
+          const status = row.status ? ' · ' + row.status : '';
+          return `<span class="saida-hit"><b>${_esc(d)}</b> <span class="badge-tipo tipo-${row.tipo}">${row.tipo}</span>${veic ? ' — ' + _esc(veic) : ''}<small>${_esc(status)}</small></span>`;
+        }).join('');
+      } else {
+        saidaHtml = '<span class="saida-nc">SEM SAÍDA</span>';
+      }
+      const veicChegada = [r.row.motorista, r.row.placa].filter(Boolean).join(' · ') || '—';
+      tr.innerHTML = `
+        <td><span class="sit-badge sit-${r.situacao}">${labelSit[r.situacao]}</span></td>
+        <td><b>${_esc(r.nf || r.ref)}</b></td>
+        <td>${_esc(r.row.destinatario || r.row.desc || '')}</td>
+        <td>${_esc(r.row.cidadeDestino || '')}</td>
+        <td>${_esc(r.row.vol || '')}</td>
+        <td>${_esc(veicChegada)}</td>
+        <td>${lidoHtml}</td>
+        <td>${saidaHtml}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function concilChangeDay(delta) {
+    concilSelectedDay = PROG.addDays(concilSelectedDay || _ontemStr(), delta < 0 ? -1 : 1);
+    _populateConcilDaySelect();
+    _updateConcilDayLabel();
+    await _concilLoad();
+  }
+  async function concilOnDaySelect(val) {
+    if (!val) return;
+    concilSelectedDay = val;
+    _updateConcilDayLabel();
+    await _concilLoad();
+  }
+  async function concilGoOntem() {
+    concilSelectedDay = _ontemStr();
+    _populateConcilDaySelect();
+    _updateConcilDayLabel();
+    await _concilLoad();
+  }
+  async function concilRefresh() {
+    await _concilLoad(true);
+    _showToast('Conciliação atualizada a partir da planilha', 'ok');
+  }
+
+  // ---------- Diagnóstico de furos (achar padrão de coletas que não descarregam) ----------
+  // Varre os últimos 14 dias, junta todas as COLETAs classificadas como FURO
+  // (não lida no inventário E sem saída no dia..+5) e mostra a distribuição dos
+  // sinais candidatos, para elegermos um padrão de exclusão.
+  const CONCIL_DIAG_DAYS = 14;
+
+  async function concilDiagRun() {
+    const panel = document.getElementById('concil-diag');
+    if (!panel) return;
+    panel.style.display = 'block';
+    panel.innerHTML = '<div class="modal-loading">Analisando furos dos últimos ' + CONCIL_DIAG_DAYS + ' dias...</div>';
+    const lidoPorNf = _concilInventIndex();
+    const furos = [];
+    for (let back = 1; back <= CONCIL_DIAG_DAYS; back++) {
+      const dia = PROG.dateStrFromOffset(-back);
+      await PROG.loadDay(dia);
+      const janela = [];
+      for (let o = 0; o <= CONCIL_FWD; o++) janela.push(PROG.addDays(dia, o)); // dia da coleta + próximos 5
+      await Promise.all(janela.map(d => PROG.loadDay(d)));
+      const cached = PROG.getCached(dia);
+      const rows = (cached && cached.status === 'ok') ? cached.rows : [];
+      rows.filter(r => r.tipo === 'COLETA' && (r.nf || r.oc || r.di || r.md)).forEach(r => {
+        const ref = (r.nf || r.oc || r.di || r.md || '').trim();
+        const nf = (r.nf || '').trim() || ref;
+        const lido = !!lidoPorNf[_normalize(nf)];
+        const saidas = PROG.searchInDates(nf, janela).filter(m => m.row.tipo !== 'COLETA');
+        if (!lido && !saidas.length) furos.push({ dia, r, nf });
+      });
+    }
+    _concilDiagRender(furos);
+  }
+
+  function _diagTally(arr, keyFn) {
+    const m = {};
+    arr.forEach(x => { const k = (keyFn(x) || '(vazio)').toString().trim() || '(vazio)'; m[k] = (m[k] || 0) + 1; });
+    return Object.entries(m).sort((a, b) => b[1] - a[1]);
+  }
+
+  function _diagTable(title, pairs, total) {
+    const linhas = pairs.slice(0, 12).map(([k, n]) =>
+      `<tr><td>${_esc(k)}</td><td class="n">${n}</td><td class="n">${total ? Math.round(n * 100 / total) + '%' : ''}</td></tr>`).join('');
+    return `<div><h4>${_esc(title)}</h4><table><tbody>${linhas}</tbody></table></div>`;
+  }
+
+  function _concilDiagRender(furos) {
+    const panel = document.getElementById('concil-diag');
+    const fechar = `<button class="diag-close" onclick="document.getElementById('concil-diag').style.display='none'">✕</button>`;
+    const total = furos.length;
+    if (!total) {
+      panel.innerHTML = fechar + '<h4>Nenhum furo nos últimos ' + CONCIL_DIAG_DAYS + ' dias 🎉</h4>';
+      return;
+    }
+    const uniqNf = new Set(furos.map(f => _normalize(f.nf))).size;
+    const inicioDesc = f => _normalize(f.r.desc).split(/[^a-z0-9]+/).filter(Boolean).slice(0, 2).join(' ');
+    const temEntrega = f => (f.r.destinatario || f.r.enderecoEntrega || f.r.cidadeDestino) ? 'Sim — tem destino de entrega' : 'Não';
+    const grid = [
+      _diagTable('Por tipo de serviço', _diagTally(furos, f => f.r.servico), total),
+      _diagTable('Início da descrição (col A)', _diagTally(furos, inicioDesc), total),
+      _diagTable('Tem destino de entrega?', _diagTally(furos, temEntrega), total),
+      _diagTable('Por cidade destino', _diagTally(furos, f => f.r.cidadeDestino), total),
+      _diagTable('Por responsável', _diagTally(furos, f => f.r.responsavel), total),
+      _diagTable('Por pagador', _diagTally(furos, f => f.r.pagador), total),
+    ].join('');
+    const lista = furos.slice(0, 80).map(f =>
+      `<tr><td>${_esc(f.dia)}</td><td><b>${_esc(f.nf)}</b></td><td>${_esc(f.r.desc)}</td><td>${_esc(f.r.destinatario)}</td><td>${_esc(f.r.cidadeDestino)}</td><td>${_esc(f.r.servico)}</td><td>${_esc(f.r.motorista)} ${_esc(f.r.placa)}</td></tr>`).join('');
+    panel.innerHTML = `
+      ${fechar}
+      <h4>Diagnóstico de furos — ${total} ocorrência(s) · ${uniqNf} NF(s) únicas (últimos ${CONCIL_DIAG_DAYS} dias)</h4>
+      <div class="diag-grid">${grid}</div>
+      <h4 style="margin-top:14px">Amostra dos furos (até 80)</h4>
+      <div style="max-height:280px;overflow:auto"><table>
+        <thead><tr><th>DIA</th><th>NF</th><th>DESCRIÇÃO (col A)</th><th>DESTINATÁRIO</th><th>CIDADE</th><th>SERVIÇO</th><th>MOTORISTA/PLACA</th></tr></thead>
+        <tbody>${lista}</tbody></table></div>`;
   }
 
   function findDono(clienteNome) {
@@ -1617,7 +1957,9 @@ const App = (() => {
     abrirNovoDono, fecharNovoDono, salvarNovoDono, toggleHist, onImportFile,
     sortBy, renderDash, runBackfillImport,
     progChangeDay, progOnDaySelect, progGoToday, progRefreshDay, renderProg,
-    abrirBuscaProgramacao, fecharBuscaProgramacao
+    abrirBuscaProgramacao, fecharBuscaProgramacao,
+    concilChangeDay, concilOnDaySelect, concilGoOntem, concilRefresh, renderConcil,
+    concilDiagRun
   };
 })();
 
