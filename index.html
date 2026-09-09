@@ -186,6 +186,40 @@
   @media (max-width:700px){
     .prog-day-cards{grid-template-columns:repeat(2,1fr);}
   }
+  /* ===== Backup / Baixa ===== */
+  .bk-wrap{display:flex;flex-direction:column;gap:14px;}
+  .bk-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
+  .bk-card h3{margin:0 0 10px;font-size:14px;color:var(--navy);}
+  .bk-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
+  .bk-field{display:flex;flex-direction:column;gap:4px;}
+  .bk-field label{font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.3px;}
+  .bk-field input{border:1px solid var(--border);border-radius:8px;padding:9px 11px;font-size:14px;}
+  .bk-presets{display:flex;gap:6px;flex-wrap:wrap;}
+  .bk-preset{background:#fff;border:1px solid var(--border);border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--navy);cursor:pointer;}
+  .bk-preset:hover{background:#eef3fb;}
+  .bk-btn{border:none;border-radius:8px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;}
+  .bk-btn-sheet{background:var(--green);color:#fff;}
+  .bk-btn-sheet:hover{background:#155e30;}
+  .bk-btn-save{background:var(--orange);color:#fff;}
+  .bk-btn-save:hover{background:#cf5414;}
+  .bk-btn-save[disabled]{background:#c3c9d4;cursor:default;}
+  .bk-btn-cfg{background:var(--navy);color:#fff;}
+  .bk-btn-ghost{background:#e5e7eb;color:#374151;}
+  .bk-summary{font-size:13px;color:var(--ink);line-height:1.6;}
+  .bk-summary b{color:var(--navy);}
+  .bk-daylist{max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:8px;margin-top:8px;}
+  .bk-daylist table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .bk-daylist th,.bk-daylist td{padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);}
+  .bk-daylist th{background:#f7f9fc;color:var(--ink-soft);font-size:11px;text-transform:uppercase;position:sticky;top:0;}
+  .bk-log{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:#0f172a;color:#c7f9d0;border-radius:8px;padding:12px;max-height:220px;overflow:auto;white-space:pre-wrap;display:none;margin-top:10px;}
+  .bk-log.show{display:block;}
+  .bk-warn{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 12px;font-size:12.5px;color:#9a3412;}
+  .bk-cfg-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .bk-cfg-row input{flex:1;min-width:280px;border:1px solid var(--border);border-radius:8px;padding:9px 11px;font-size:13px;}
+  .bk-hint{font-size:11.5px;color:var(--ink-soft);}
+  #modal-baixa .modal-box{max-width:520px;}
+  .bk-confirm-num{font-size:30px;font-weight:800;color:var(--orange);}
+  .bk-confirm-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;}
 </style>
 </head>
 <body>
@@ -201,6 +235,7 @@
   <button class="tab-btn" data-tab="concil" onclick="App.switchTab('concil')">Conciliação</button>
   <button class="tab-btn" data-tab="donos" onclick="App.switchTab('donos')">Dono da Conta</button>
   <button class="tab-btn" data-tab="dash" onclick="App.switchTab('dash')">Dashboard</button>
+  <button class="tab-btn" data-tab="backup" onclick="App.switchTab('backup')">Backup / Baixa</button>
 </nav>
 
 <main>
@@ -427,6 +462,51 @@
     </div>
   </section>
 
+  <section id="tab-backup" class="tab-pane">
+    <div class="bk-wrap">
+      <div class="bk-card">
+        <div class="bk-row" style="justify-content:space-between;align-items:center;">
+          <h3 style="margin:0;">Backup &amp; baixa da base de contagem</h3>
+          <button class="bk-btn bk-btn-sheet" onclick="App.backupOpenSheet()">&#128196; Acessar a planilha de backup</button>
+        </div>
+        <p class="bk-hint" style="margin:8px 0 0;">Salva os registros do per&iacute;odo escolhido na planilha de backup e, s&oacute; depois de confirmar que gravou, remove-os da base do invent&aacute;rio (Firebase). A base de contagem s&oacute; recebe novos registros, ent&atilde;o a baixa &eacute; definitiva.</p>
+      </div>
+
+      <div class="bk-card">
+        <h3>1 &middot; Per&iacute;odo a baixar</h3>
+        <div class="bk-row">
+          <div class="bk-field"><label>De (dia)</label><input type="date" id="bk-from"></div>
+          <div class="bk-field"><label>At&eacute; (dia)</label><input type="date" id="bk-to"></div>
+          <button class="bk-btn bk-btn-cfg" onclick="App.backupPreview()">Pr&eacute;-visualizar</button>
+        </div>
+        <div class="bk-presets" style="margin-top:10px;">
+          <button class="bk-preset" onclick="App.backupPreset('30')">At&eacute; 30 dias atr&aacute;s</button>
+          <button class="bk-preset" onclick="App.backupPreset('60')">At&eacute; 60 dias atr&aacute;s</button>
+          <button class="bk-preset" onclick="App.backupPreset('90')">At&eacute; 90 dias atr&aacute;s</button>
+          <button class="bk-preset" onclick="App.backupPreset('all')">Toda a base</button>
+        </div>
+        <div id="bk-summary" class="bk-summary" style="margin-top:12px;">Escolha o per&iacute;odo.</div>
+        <div id="bk-daylist" class="bk-daylist" style="display:none;"></div>
+      </div>
+
+      <div class="bk-card">
+        <h3>2 &middot; Salvar backup e dar baixa</h3>
+        <div id="bk-webhook-warn" class="bk-warn" style="display:none;margin-bottom:10px;">&#9888; Configure abaixo o link do Apps Script (item 3) antes de fazer a baixa.</div>
+        <button class="bk-btn bk-btn-save" id="bk-run" onclick="App.backupRun()" disabled>Salvar backup e dar baixa do per&iacute;odo</button>
+        <div id="bk-log" class="bk-log"></div>
+      </div>
+
+      <div class="bk-card">
+        <h3>3 &middot; Conex&atilde;o com a planilha (Apps Script)</h3>
+        <div class="bk-cfg-row">
+          <input type="text" id="bk-webhook" placeholder="Cole a URL do app da web do Apps Script (termina em /exec)">
+          <button class="bk-btn bk-btn-cfg" onclick="App.backupSaveWebhook()">Salvar link</button>
+        </div>
+        <p class="bk-hint" style="margin:8px 0 0;">Configura&ccedil;&atilde;o &uacute;nica. O link fica salvo no Firebase e vale para todos os aparelhos.</p>
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <div id="modal-busca-prog" class="modal-overlay" onclick="if(event.target===this) App.fecharBuscaProgramacao()">
@@ -435,6 +515,23 @@
     <h2 id="modal-prog-title">Buscar na Programação</h2>
     <div class="modal-sub" id="modal-prog-sub"></div>
     <div class="modal-body" id="modal-prog-body"></div>
+  </div>
+</div>
+
+<div id="modal-baixa" class="modal-overlay" onclick="if(event.target===this) App.backupCancelConfirm()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="App.backupCancelConfirm()">&#10005;</button>
+    <h2>Confirmar baixa</h2>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--ink);">Voc&ecirc; vai gravar na planilha de backup e <b>remover da base</b>:</p>
+      <div style="text-align:center;margin:10px 0;"><span class="bk-confirm-num" id="bk-confirm-num">0</span> <span style="font-size:13px;color:var(--ink-soft);">registros</span></div>
+      <div class="bk-summary" id="bk-confirm-detail" style="text-align:center;"></div>
+      <div class="bk-warn" style="margin-top:12px;">A remo&ccedil;&atilde;o &eacute; definitiva. Os dados s&oacute; saem da base <b>depois</b> de confirmados na planilha; se a grava&ccedil;&atilde;o n&atilde;o for confirmada, nada &eacute; apagado.</div>
+      <div class="bk-confirm-actions">
+        <button class="bk-btn bk-btn-ghost" onclick="App.backupCancelConfirm()">Cancelar</button>
+        <button class="bk-btn bk-btn-save" onclick="App.backupDoRun()">Confirmar e baixar</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -567,13 +664,14 @@ const SEED_DONOS = [
 <script>
 const DB = (() => {
   let fbApp = null, fbDb = null, ok = false;
-  let cbInventario = null, cbCasos = null, cbDonos = null, cbSync = null;
+  let cbInventario = null, cbCasos = null, cbDonos = null, cbSync = null, cbConfig = null;
 
   function init(callbacks) {
     cbInventario = callbacks.onInventario;
     cbCasos      = callbacks.onCasos;
     cbDonos      = callbacks.onDonos;
     cbSync       = callbacks.onSync;
+    cbConfig     = callbacks.onConfig;
     try {
       if (typeof firebase === 'undefined') throw new Error('SDK não carregado');
       if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
@@ -607,6 +705,7 @@ const DB = (() => {
         cbDonos && cbDonos(val);
       }
     });
+    fbDb.ref('config').on('value', snap => { cbConfig && cbConfig(snap.val() || {}); });
   }
 
   function _seedDonos() {
@@ -698,7 +797,40 @@ const DB = (() => {
     } catch (e) { return { success: false, written, error: e }; }
   }
 
-  return { init, saveCaso, addDono, updateDono, deleteDono, importDonos, bulkSaveCasos, sanitizeKey, isOk: () => ok };
+  function saveWebhookUrl(url) {
+    if (!ok) return Promise.resolve({ success: false });
+    return fbDb.ref('config/backupWebhookUrl').set(url)
+      .then(() => ({ success: true }))
+      .catch(e => ({ success: false, error: e }));
+  }
+
+  async function fetchInventarioWithKeys() {
+    if (!ok) return { success: false, items: [] };
+    try {
+      const snap = await fbDb.ref('inventario').once('value');
+      const items = [];
+      snap.forEach(child => { items.push(Object.assign({ __key: child.key }, child.val())); });
+      return { success: true, items };
+    } catch (e) { return { success: false, items: [], error: e }; }
+  }
+
+  async function deleteInventarioByKeys(keys) {
+    if (!ok) return { success: false, removed: 0 };
+    const CHUNK = 400;
+    let removed = 0;
+    try {
+      for (let i = 0; i < keys.length; i += CHUNK) {
+        const slice = keys.slice(i, i + CHUNK);
+        const update = {};
+        slice.forEach(k => { update['inventario/' + k] = null; });
+        await fbDb.ref().update(update);
+        removed += slice.length;
+      }
+      return { success: true, removed };
+    } catch (e) { return { success: false, removed, error: e }; }
+  }
+
+  return { init, saveCaso, addDono, updateDono, deleteDono, importDonos, bulkSaveCasos, sanitizeKey, saveWebhookUrl, fetchInventarioWithKeys, deleteInventarioByKeys, isOk: () => ok };
 })();
 </script>
 <script>
@@ -961,6 +1093,7 @@ const App = (() => {
       onInventario: items => { inventarioItems = items; _populateDaySelect(); renderVerif(); renderDash(); },
       onCasos:      c => { casos = c; renderVerif(); renderDash(); },
       onDonos:      d => { donos = d; renderVerif(); renderDonos(); renderDash(); },
+      onConfig:     c => backupOnConfig(c),
       onSync:       _syncIndicator
     });
     progInit();
@@ -1001,10 +1134,12 @@ const App = (() => {
     document.getElementById('tab-concil').classList.toggle('active', tab === 'concil');
     document.getElementById('tab-donos').classList.toggle('active', tab === 'donos');
     document.getElementById('tab-dash').classList.toggle('active', tab === 'dash');
+    document.getElementById('tab-backup').classList.toggle('active', tab === 'backup');
     if (tab === 'prog') renderProg();
     if (tab === 'concil') concilOpen();
     if (tab === 'donos') renderDonos();
     if (tab === 'dash') renderDash();
+    if (tab === 'backup') backupOpen();
   }
 
   function sortBy(col) {
@@ -1952,7 +2087,228 @@ const App = (() => {
     _renderBarList('dash-por-dia', dias.map(d => [_fmtDay(d), porDia[d].size]));
   }
 
+  // ============ BACKUP / BAIXA ============
+  const BK_SHEET_ID = '1j15FSXNQj1Nvk3eLLv8XtxPoE3y7f0y4hL22xRpi8eo';
+  const BK_SHEET_URL = 'https://docs.google.com/spreadsheets/d/' + BK_SHEET_ID + '/edit';
+  const BK_HEADER = ['DATA','DONO DA CONTA','CLIENTE','NF/DI','VOL','END','OBSERVACAO/ LEITURA','1o ATEND. RETORNO','1o OPER. RETORNO','2o ATEND. RETORNO','2o OPER. RETORNO','STATUS','CONFERENTE','TS','BATCH_ID','BAIXA_EM'];
+  const BK_BATCH_COL = 'O'; // coluna do BATCH_ID (15a)
+  let backupWebhookUrl = '';
+  let _bkCbSeq = 0;
+  let _bkPending = null; // { fromDay, toDay, count }
+
+  function backupOnConfig(cfg) {
+    backupWebhookUrl = (cfg && cfg.backupWebhookUrl) ? String(cfg.backupWebhookUrl) : '';
+    const inp = document.getElementById('bk-webhook');
+    if (inp && document.activeElement !== inp) inp.value = backupWebhookUrl;
+    _bkRefreshRunState();
+  }
+
+  function _bkRefreshRunState() {
+    const warn = document.getElementById('bk-webhook-warn');
+    const btn = document.getElementById('bk-run');
+    const has = !!backupWebhookUrl;
+    if (warn) warn.style.display = has ? 'none' : 'block';
+    if (btn) btn.disabled = !has || !_bkPending || !_bkPending.count;
+  }
+
+  function backupOpenSheet() { window.open(BK_SHEET_URL, '_blank'); }
+
+  async function backupSaveWebhook() {
+    const inp = document.getElementById('bk-webhook');
+    const url = (inp.value || '').trim();
+    if (url && !/^https:\/\/script\.google\.com\/.*\/exec/.test(url)) {
+      _showToast('O link deve ser o app da web do Apps Script (terminar em /exec).', 'err');
+      return;
+    }
+    const res = await DB.saveWebhookUrl(url);
+    if (res.success) { backupWebhookUrl = url; _showToast('Link salvo.', 'ok'); _bkRefreshRunState(); }
+    else _showToast('Nao foi possivel salvar o link.', 'err');
+  }
+
+  function _bkDayStr(d) {
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  function backupOpen() {
+    const from = document.getElementById('bk-from');
+    const to = document.getElementById('bk-to');
+    if (to && !to.value) {
+      const hoje = new Date();
+      const ontem = new Date(hoje); ontem.setDate(ontem.getDate() - 1);
+      const ini = new Date(hoje); ini.setDate(ini.getDate() - 30);
+      from.value = _bkDayStr(ini);
+      to.value = _bkDayStr(ontem);
+    }
+    const inp = document.getElementById('bk-webhook');
+    if (inp) inp.value = backupWebhookUrl;
+    backupPreview();
+  }
+
+  function backupPreset(kind) {
+    const hoje = new Date();
+    const from = document.getElementById('bk-from');
+    const to = document.getElementById('bk-to');
+    if (kind === 'all') {
+      const dias = inventarioItems.filter(i=>i&&i.ts).map(i=>_toDay(i.ts)).sort();
+      from.value = dias[0] || _bkDayStr(hoje);
+      to.value = _toDay(Date.now());
+    } else {
+      const n = parseInt(kind,10);
+      const ini = new Date(hoje); ini.setDate(ini.getDate() - n);
+      const ontem = new Date(hoje); ontem.setDate(ontem.getDate() - 1);
+      from.value = _bkDayStr(ini);
+      to.value = _bkDayStr(ontem);
+    }
+    backupPreview();
+  }
+
+  function _bkItemsInPeriod(fromDay, toDay) {
+    return inventarioItems.filter(i => {
+      if (!i || !i.ts || !i.nf) return false;
+      const d = _toDay(i.ts);
+      return d >= fromDay && d <= toDay;
+    });
+  }
+
+  function backupPreview() {
+    const fromDay = (document.getElementById('bk-from').value || '').trim();
+    const toDay = (document.getElementById('bk-to').value || '').trim();
+    const sumEl = document.getElementById('bk-summary');
+    const listEl = document.getElementById('bk-daylist');
+    _bkPending = null;
+    if (!fromDay || !toDay) { sumEl.innerHTML = 'Escolha o periodo.'; listEl.style.display='none'; _bkRefreshRunState(); return; }
+    if (fromDay > toDay) { sumEl.innerHTML = '<span style="color:var(--red)">A data inicial e maior que a final.</span>'; listEl.style.display='none'; _bkRefreshRunState(); return; }
+    const items = _bkItemsInPeriod(fromDay, toDay);
+    const porDia = {};
+    const nfs = new Set();
+    items.forEach(i => { const d=_toDay(i.ts); (porDia[d]||(porDia[d]={n:0,nf:new Set()})); porDia[d].n++; porDia[d].nf.add(i.nf); nfs.add(i.nf); });
+    _bkPending = { fromDay: fromDay, toDay: toDay, count: items.length };
+    if (!items.length) { sumEl.innerHTML = 'Nenhum registro no periodo <b>'+_fmtDay(fromDay)+'</b> a <b>'+_fmtDay(toDay)+'</b>.'; listEl.style.display='none'; _bkRefreshRunState(); return; }
+    sumEl.innerHTML = 'Periodo <b>'+_fmtDay(fromDay)+'</b> a <b>'+_fmtDay(toDay)+'</b>: <b>'+items.length+'</b> registros, <b>'+nfs.size+'</b> NFs unicas, em <b>'+Object.keys(porDia).length+'</b> dias.';
+    const dias = Object.keys(porDia).sort().reverse();
+    listEl.innerHTML = '<table><thead><tr><th>Dia</th><th>Registros</th><th>NFs unicas</th></tr></thead><tbody>' +
+      dias.map(d => '<tr><td>'+_fmtDay(d)+'</td><td>'+porDia[d].n+'</td><td>'+porDia[d].nf.size+'</td></tr>').join('') +
+      '</tbody></table>';
+    listEl.style.display = 'block';
+    _bkRefreshRunState();
+  }
+
+  function backupRun() {
+    if (!backupWebhookUrl) { _showToast('Configure o link do Apps Script primeiro.', 'err'); return; }
+    if (!_bkPending || !_bkPending.count) { _showToast('Nada para baixar no periodo.', 'err'); return; }
+    document.getElementById('bk-confirm-num').textContent = _bkPending.count;
+    document.getElementById('bk-confirm-detail').innerHTML = 'Periodo <b>'+_fmtDay(_bkPending.fromDay)+'</b> a <b>'+_fmtDay(_bkPending.toDay)+'</b>';
+    document.getElementById('modal-baixa').classList.add('show');
+  }
+
+  function backupCancelConfirm() { document.getElementById('modal-baixa').classList.remove('show'); }
+
+  function _bkSleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+  function _bkCountBatch(batchId) {
+    return new Promise((resolve, reject) => {
+      const cbName = '__bk_cb_' + (_bkCbSeq++);
+      const script = document.createElement('script');
+      function cleanup(){ delete window[cbName]; if (script.parentNode) script.parentNode.removeChild(script); }
+      window[cbName] = (data) => {
+        let n = 0;
+        try { n = (data && data.table && data.table.rows) ? data.table.rows.length : 0; } catch(e){ n = 0; }
+        resolve(n); cleanup();
+      };
+      const q = "select " + BK_BATCH_COL + " where " + BK_BATCH_COL + " = '" + batchId + "'";
+      const url = 'https://docs.google.com/spreadsheets/d/' + BK_SHEET_ID +
+        '/gviz/tq?tqx=out:json;responseHandler:' + cbName + '&gid=0&tq=' + encodeURIComponent(q);
+      script.src = url;
+      script.onerror = () => { reject(new Error('gviz erro')); cleanup(); };
+      document.head.appendChild(script);
+      setTimeout(() => { if (window[cbName]) { reject(new Error('timeout')); cleanup(); } }, 12000);
+    });
+  }
+
+  async function backupDoRun() {
+    backupCancelConfirm();
+    const logEl = document.getElementById('bk-log');
+    const runBtn = document.getElementById('bk-run');
+    logEl.classList.add('show'); logEl.textContent = ''; runBtn.disabled = true;
+    const log = m => { logEl.textContent += m + '\n'; logEl.scrollTop = logEl.scrollHeight; };
+    try {
+      if (!_bkPending) { log('Nada selecionado.'); runBtn.disabled=false; return; }
+      const fromDay = _bkPending.fromDay, toDay = _bkPending.toDay;
+      log('Buscando registros e chaves na base...');
+      const fetched = await DB.fetchInventarioWithKeys();
+      if (!fetched.success) { log('x Erro ao ler a base: ' + ((fetched.error && fetched.error.message) || '')); runBtn.disabled=false; return; }
+      const sel = fetched.items.filter(function(it){ if (!it || !it.ts || !it.nf) return false; const d=_toDay(it.ts); return d>=fromDay && d<=toDay; });
+      if (!sel.length) { log('Nada encontrado no periodo (a base pode ter mudado). Cancelado.'); _showToast('Nada para baixar.', 'err'); runBtn.disabled=false; backupPreview(); return; }
+      log('-> ' + sel.length + ' registros selecionados.');
+      const batchId = 'BID-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,7);
+      const baixaEm = new Date().toISOString();
+      const rows = sel.map(function(it){
+        const key = DB.sanitizeKey(it.nf);
+        const caso = casos[key] || {};
+        const obsValue = ('obs' in caso) ? caso.obs : (it.obs || '');
+        return [
+          _fmtDay(_toDay(it.ts)),
+          findDono(it.cliente) || '',
+          it.cliente || '',
+          it.nf || '',
+          it.vol || '',
+          it.end || '',
+          obsValue || '',
+          caso.atend1 || '', caso.oper1 || '', caso.atend2 || '', caso.oper2 || '',
+          caso.status || 'PENDENTE',
+          it.operador || '',
+          new Date(it.ts).toISOString(),
+          batchId,
+          baixaEm
+        ];
+      });
+      const keys = sel.map(function(it){ return it.__key; }).filter(Boolean);
+
+      log('Gravando na planilha de backup (batch ' + batchId + ')...');
+      const CH = 800;
+      for (let i=0; i<rows.length; i+=CH) {
+        const slice = rows.slice(i, i+CH);
+        await fetch(backupWebhookUrl, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ batchId: batchId, header: BK_HEADER, rows: slice }) });
+        log('  enviado ' + Math.min(i+CH, rows.length) + '/' + rows.length);
+      }
+
+      log('Conferindo gravacao na planilha (aguarde)...');
+      let confirmed = 0;
+      for (let attempt=1; attempt<=12; attempt++) {
+        await _bkSleep(2500);
+        try { confirmed = await _bkCountBatch(batchId); } catch(e){ confirmed = -1; }
+        log('  tentativa ' + attempt + ': ' + (confirmed<0 ? 'aguardando...' : confirmed + '/' + rows.length + ' linhas'));
+        if (confirmed >= rows.length) break;
+      }
+      if (confirmed < rows.length) {
+        log('x Nao confirmei a gravacao completa. NENHUM registro foi apagado.');
+        log('  Confira a planilha (batch ' + batchId + ') e tente de novo.');
+        _showToast('Backup nao confirmado - nada foi apagado.', 'err');
+        runBtn.disabled=false; return;
+      }
+      log('OK Gravacao confirmada (' + confirmed + ' linhas).');
+
+      log('Removendo ' + keys.length + ' registros da base...');
+      const del = await DB.deleteInventarioByKeys(keys);
+      if (!del.success) {
+        log('x Erro ao remover da base: ' + ((del.error && del.error.message) || ''));
+        log('  Os dados JA estao na planilha (batch ' + batchId + ').');
+        _showToast('Backup salvo, mas a baixa falhou.', 'err');
+        runBtn.disabled=false; return;
+      }
+      log('OK Baixa concluida: ' + del.removed + ' registros removidos da base.');
+      _showToast('Backup e baixa concluidos: ' + del.removed + ' registros.', 'ok');
+      _bkPending = null;
+      backupPreview();
+    } catch (e) {
+      log('x Erro inesperado: ' + ((e && e.message) || e));
+      _showToast('Erro na baixa.', 'err');
+      const rb = document.getElementById('bk-run'); if (rb) rb.disabled=false;
+    }
+  }
+
   return {
+    backupOpen, backupOpenSheet, backupPreview, backupPreset, backupSaveWebhook, backupRun, backupCancelConfirm, backupDoRun,
     init, switchTab, changeDay, onDaySelect, goToday, renderVerif, renderDonos,
     abrirNovoDono, fecharNovoDono, salvarNovoDono, toggleHist, onImportFile,
     sortBy, renderDash, runBackfillImport,
