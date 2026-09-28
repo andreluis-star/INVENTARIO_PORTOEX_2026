@@ -2205,6 +2205,23 @@ const App = (() => {
 
   function _bkSleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
+  function _bkAppendJsonp(header, rows) {
+    return new Promise((resolve, reject) => {
+      const cbName = '__bk_ap_' + (_bkCbSeq++);
+      const script = document.createElement('script');
+      function cleanup(){ delete window[cbName]; if (script.parentNode) script.parentNode.removeChild(script); }
+      window[cbName] = (data) => { resolve(data); cleanup(); };
+      let url = backupWebhookUrl + (backupWebhookUrl.indexOf('?') >= 0 ? '&' : '?') +
+        'mode=append&callback=' + cbName +
+        '&rows=' + encodeURIComponent(JSON.stringify(rows));
+      if (header) url += '&header=' + encodeURIComponent(JSON.stringify(header));
+      script.src = url;
+      script.onerror = () => { reject(new Error('sem resposta do servidor')); cleanup(); };
+      document.head.appendChild(script);
+      setTimeout(() => { if (window[cbName]) { reject(new Error('timeout')); cleanup(); } }, 20000);
+    });
+  }
+
   function _bkCountBatch(batchId) {
     return new Promise((resolve, reject) => {
       const cbName = '__bk_cb_' + (_bkCbSeq++);
@@ -2264,29 +2281,47 @@ const App = (() => {
       });
       const keys = sel.map(function(it){ return it.__key; }).filter(Boolean);
 
-      log('Gravando na planilha de backup (batch ' + batchId + ')...');
-      const CH = 800;
-      for (let i=0; i<rows.length; i+=CH) {
-        const slice = rows.slice(i, i+CH);
-        await fetch(backupWebhookUrl, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ batchId: batchId, header: BK_HEADER, rows: slice }) });
-        log('  enviado ' + Math.min(i+CH, rows.length) + '/' + rows.length);
+      log('Gravando na planilha de backup via GET/JSONP (batch ' + batchId + ')...');
+      let addedTotal = 0;
+      let firstChunk = true;
+      let idx = 0;
+      const MAXURL = 5000;
+      while (idx < rows.length) {
+        // monta um bloco adaptativo ate ~MAXURL chars de URL
+        const chunk = [];
+        let approx = backupWebhookUrl.length + 140;
+        while (idx < rows.length) {
+          const enc = encodeURIComponent(JSON.stringify(rows[idx]));
+          if (chunk.length > 0 && approx + enc.length > MAXURL) break;
+          chunk.push(rows[idx]);
+          approx += enc.length + 3;
+          idx++;
+        }
+        let res;
+        try {
+          res = await _bkAppendJsonp(firstChunk ? BK_HEADER : null, chunk);
+        } catch (err) {
+          log('x Falha de comunicacao no envio: ' + ((err && err.message) || err));
+          log('  NENHUM registro foi apagado. Tente de novo.');
+          _showToast('Falha ao enviar - nada apagado.', 'err');
+          runBtn.disabled = false; return;
+        }
+        if (!res || !res.ok) {
+          log('x Erro do servidor ao gravar: ' + ((res && res.error) || 'desconhecido'));
+          log('  NENHUM registro foi apagado.');
+          _showToast('Erro ao gravar - nada apagado.', 'err');
+          runBtn.disabled = false; return;
+        }
+        addedTotal += (res.added || 0);
+        firstChunk = false;
+        log('  gravado ' + addedTotal + '/' + rows.length);
       }
-
-      log('Conferindo gravacao na planilha (aguarde)...');
-      let confirmed = 0;
-      for (let attempt=1; attempt<=12; attempt++) {
-        await _bkSleep(2500);
-        try { confirmed = await _bkCountBatch(batchId); } catch(e){ confirmed = -1; }
-        log('  tentativa ' + attempt + ': ' + (confirmed<0 ? 'aguardando...' : confirmed + '/' + rows.length + ' linhas'));
-        if (confirmed >= rows.length) break;
+      if (addedTotal < rows.length) {
+        log('x Servidor confirmou ' + addedTotal + ' de ' + rows.length + '. NENHUM registro foi apagado.');
+        _showToast('Gravacao incompleta - nada apagado.', 'err');
+        runBtn.disabled = false; return;
       }
-      if (confirmed < rows.length) {
-        log('x Nao confirmei a gravacao completa. NENHUM registro foi apagado.');
-        log('  Confira a planilha (batch ' + batchId + ') e tente de novo.');
-        _showToast('Backup nao confirmado - nada foi apagado.', 'err');
-        runBtn.disabled=false; return;
-      }
-      log('OK Gravacao confirmada (' + confirmed + ' linhas).');
+      log('OK Gravacao confirmada pelo servidor (' + addedTotal + ' linhas).');
 
       log('Removendo ' + keys.length + ' registros da base...');
       const del = await DB.deleteInventarioByKeys(keys);
