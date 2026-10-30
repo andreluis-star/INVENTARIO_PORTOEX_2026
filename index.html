@@ -39,7 +39,7 @@
   .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;text-align:center;}
   .card span{display:block;font-size:24px;font-weight:800;color:var(--navy);}
   .card label{font-size:11px;color:var(--ink-soft);font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
-  .card.pend span{color:var(--amber);} .card.and span{color:var(--blue);} .card.res span{color:var(--green);}
+  .card.pend span{color:var(--amber);} .card.and span{color:var(--blue);} .card.res span{color:var(--green);} .card.aguard span{color:var(--orange);}
 
   .searchbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
   .searchbar input[type=text]{flex:1;min-width:220px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;}
@@ -61,6 +61,7 @@
   .st-PENDENTE{background:var(--amber);}
   .st-EM_ANDAMENTO{background:var(--blue);}
   .st-RESOLVIDO{background:var(--green);}
+  .st-AGUARDANDO{background:var(--orange);}
   .empty-state{padding:40px 20px;text-align:center;color:var(--ink-soft);font-size:14px;}
   textarea.obs-input{width:100%;min-width:170px;min-height:38px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:6px 7px;font-size:14.5px;font-weight:700;font-family:inherit;background:#fffdf7;}
   textarea.obs-input:focus{outline:none;border-color:var(--orange);background:#fff;box-shadow:0 0 0 2px rgba(232,97,26,.15);}
@@ -253,6 +254,7 @@
       <div class="card total"><span id="cnt-total">0</span><label>Total do dia</label></div>
       <div class="card pend"><span id="cnt-pend">0</span><label>Pendente</label></div>
       <div class="card and"><span id="cnt-and">0</span><label>Em andamento</label></div>
+      <div class="card aguard"><span id="cnt-aguard">0</span><label>Aguardando</label></div>
       <div class="card res"><span id="cnt-res">0</span><label>Resolvido</label></div>
     </div>
 
@@ -290,6 +292,7 @@
               <select class="col-filter" data-col="status" onchange="App.renderVerif()">
                 <option value="">Todos</option>
                 <option value="PENDENTE">Pendente</option>
+                <option value="AGUARDANDO">Aguardando</option>
                 <option value="EM_ANDAMENTO">Em andamento</option>
                 <option value="RESOLVIDO">Resolvido</option>
               </select>
@@ -443,6 +446,7 @@
       <div class="card total"><span id="dash-total">0</span><label>Total geral (NFs únicas)</label></div>
       <div class="card pend"><span id="dash-pend">0</span><label>Pendente</label></div>
       <div class="card and"><span id="dash-and">0</span><label>Em andamento</label></div>
+      <div class="card aguard"><span id="dash-aguard">0</span><label>Aguardando</label></div>
       <div class="card res"><span id="dash-res">0</span><label>Resolvido</label></div>
       <div class="card"><span id="dash-pct">0%</span><label>% Resolvido</label></div>
     </div>
@@ -1696,11 +1700,12 @@ const App = (() => {
 
   function renderVerif() {
     const rows = buildDayRows(selectedDay);
-    const cnt = { total: rows.length, PENDENTE: 0, EM_ANDAMENTO: 0, RESOLVIDO: 0 };
+    const cnt = { total: rows.length, PENDENTE: 0, AGUARDANDO: 0, EM_ANDAMENTO: 0, RESOLVIDO: 0 };
     rows.forEach(r => cnt[r.status] = (cnt[r.status] || 0) + 1);
     document.getElementById('cnt-total').textContent = cnt.total;
     document.getElementById('cnt-pend').textContent = cnt.PENDENTE || 0;
     document.getElementById('cnt-and').textContent = cnt.EM_ANDAMENTO || 0;
+    document.getElementById('cnt-aguard').textContent = cnt.AGUARDANDO || 0;
     document.getElementById('cnt-res').textContent = cnt.RESOLVIDO || 0;
 
     const q = _normalize(document.getElementById('search-verif').value);
@@ -1755,6 +1760,7 @@ const App = (() => {
         <td>
           <select class="status-sel st-${r.status}" data-field="status">
             <option value="PENDENTE" ${r.status === 'PENDENTE' ? 'selected' : ''}>PENDENTE</option>
+            <option value="AGUARDANDO" ${r.status === 'AGUARDANDO' ? 'selected' : ''}>AGUARDANDO</option>
             <option value="EM_ANDAMENTO" ${r.status === 'EM_ANDAMENTO' ? 'selected' : ''}>EM ANDAMENTO</option>
             <option value="RESOLVIDO" ${r.status === 'RESOLVIDO' ? 'selected' : ''}>RESOLVIDO</option>
           </select>
@@ -2054,11 +2060,12 @@ const App = (() => {
     if (!document.getElementById('tab-dash')) return;
     const rows = buildAllRows();
     const total = rows.length;
-    const cnt = { PENDENTE: 0, EM_ANDAMENTO: 0, RESOLVIDO: 0 };
+    const cnt = { PENDENTE: 0, AGUARDANDO: 0, EM_ANDAMENTO: 0, RESOLVIDO: 0 };
     rows.forEach(r => cnt[r.status] = (cnt[r.status] || 0) + 1);
     document.getElementById('dash-total').textContent = total;
     document.getElementById('dash-pend').textContent = cnt.PENDENTE || 0;
     document.getElementById('dash-and').textContent = cnt.EM_ANDAMENTO || 0;
+    document.getElementById('dash-aguard').textContent = cnt.AGUARDANDO || 0;
     document.getElementById('dash-res').textContent = cnt.RESOLVIDO || 0;
     document.getElementById('dash-pct').textContent = total ? Math.round((cnt.RESOLVIDO || 0) / total * 100) + '%' : '0%';
 
